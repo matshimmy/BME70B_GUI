@@ -1,0 +1,25 @@
+/* Blue Button Style */
+QPushButton#blueButton {
+    background-color: #007bff;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 4px;
+}
+
+QPushButton#blueButton:pressed {
+    background-color: #0056b3;
+}
+
+/* Red Button Style */
+QPushButton#redButton {
+    background-color: #dc3545;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+QPushButton#redButton:pressed {
+    background-color: #c82333;
+}
