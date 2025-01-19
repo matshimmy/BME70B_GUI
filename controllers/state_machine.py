@@ -1,28 +1,41 @@
 from controllers.states import AppState
+from models.device_model import DeviceModel
 
 class StateMachine:
     def __init__(self):
-        # Set the initial state
         self.current_state = AppState.IDLE
+        self.model = DeviceModel()  # The model is part of the state machine
 
     def transition_to(self, new_state):
-        """
-        Generic transition method.
-        You could add checks or logs here to validate or record state changes.
-        """
+        """Generic method to transition to a new state."""
+        # add validation or checks before assigning
         self.current_state = new_state
 
-    def connect_mcu(self, connection_type):
+    def connect_device(self, connection_type: str):
         """
-        An example method to move from IDLE -> SYSTEM_CHECK
-        based on a connection type ('USB' or 'Bluetooth', etc.)
+        Called to handle device connection logic from IDLE to SYSTEM_CHECK.
         """
         if self.current_state == AppState.IDLE:
-            # Potentially do some logic:
-            # e.g., check that 'USB' or 'Bluetooth' is valid
-            # or set some internal flag
-            self.current_state = AppState.SYSTEM_CHECK
-        
-        # If you have more advanced logic, you could handle it here:
-        # elif self.current_state == SomeOtherState:
-        #     ...
+            # 1) Update the model to connect
+            self.model.connect(connection_type)
+            # 2) Move to system check state
+            self.transition_to(AppState.SYSTEM_CHECK)
+        else:
+            # log an error or handle invalid transitions
+            pass
+
+    def do_system_check(self):
+        """
+        In SYSTEM_CHECK:
+        - Check power
+        - Test transmission
+        - Then transition to next state if everything is OK
+        """
+        if self.current_state == AppState.SYSTEM_CHECK:
+            self.model.check_power()
+            self.model.test_transmission()
+            # transition to MODE_SELECTION if all goes well
+            # self.transition_to(AppState.MODE_SELECTION)
+        else:
+            # Handle error
+            pass
