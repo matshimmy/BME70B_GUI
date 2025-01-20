@@ -27,6 +27,7 @@ class DeviceModel(QObject):
     def disconnect(self):
         self.connection_type = None
         self.is_connected = False
+        self.power_level = -1
         self.transmission_ok = False
         self.model_changed.emit()
 

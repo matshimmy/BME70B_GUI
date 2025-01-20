@@ -58,6 +58,9 @@ class MainWindow(QMainWindow):
         self.idle_screen.usb_button.clicked.connect(lambda: self.handle_connect_mcu('USB'))
         self.idle_screen.bt_button.clicked.connect(lambda: self.handle_connect_mcu('Bluetooth'))
 
+        # Connect signals from SystemCheckWidget
+        self.system_check_screen.abort_button.clicked.connect(lambda: self.handle_abort_system_check())
+
         # Layout
         layout = QVBoxLayout(central_widget)
         layout.addWidget(self.stacked_widget)
@@ -93,3 +96,11 @@ class MainWindow(QMainWindow):
         self.thread.quit()
         self.thread.wait()
         # now do next step or finalize
+
+    def handle_abort_system_check(self):
+        self.state_machine.disconnect_device()
+        self.stacked_widget.setCurrentIndex(0)
+        self.setWindowTitle(windowTitlePrefix + self.state_machine.current_state.value)
+        # Add the call to reset the system check widget
+        self.system_check_screen.reset_spinners()
+

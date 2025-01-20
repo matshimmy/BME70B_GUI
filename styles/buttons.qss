@@ -23,3 +23,17 @@ QPushButton#redButton {
 QPushButton#redButton:pressed {
     background-color: #c82333;
 }
+
+/* Amber Button Style */
+QPushButton#amberButton {
+    background-color: #ffbf00;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 4px;
+}
+
+QPushButton#amberButton:pressed {
+    background-color: #cc9900;
+}
+

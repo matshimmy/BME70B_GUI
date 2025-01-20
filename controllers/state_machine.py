@@ -8,21 +8,21 @@ class StateMachine:
 
     def transition_to(self, new_state):
         """Generic method to transition to a new state."""
-        # add validation or checks before assigning
         self.current_state = new_state
 
     def connect_device(self, connection_type: str):
         """
         Called to handle device connection logic from IDLE to SYSTEM_CHECK.
         """
-        if self.current_state == AppState.IDLE:
-            # 1) Update the model to connect
-            self.model.connect(connection_type)
-            # 2) Move to system check state
-            self.transition_to(AppState.SYSTEM_CHECK)
-        else:
-            # log an error or handle invalid transitions
-            pass
+        self.model.connect(connection_type)
+        self.transition_to(AppState.SYSTEM_CHECK)
+
+    def disconnect_device(self):
+        """
+        Called to handle device disconnection logic from SYSTEM_CHECK to IDLE.
+        """
+        self.model.disconnect()
+        self.transition_to(AppState.IDLE)
 
     def do_system_check_connection(self):
         """
