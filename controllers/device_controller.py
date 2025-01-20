@@ -27,10 +27,11 @@ class DeviceController:
         # keep track of whether the thread is running
         self._running = False
 
-    def start_system_check(self):
+    def start_system_check(self, connection_type : str):
         """
         Launch the worker thread to do the system check simulation.
         """
+        self.state_machine.connect_device(connection_type)
         if not self._running:
             self._running = True
             self.thread.start()
@@ -69,9 +70,9 @@ class DeviceController:
         self.thread.wait()
         self.state_machine.do_system_check_done()
 
-    def cleanup(self):
+    def disconnect_device(self):
         """
-        Optionally call this if your application is closing.
-        Ensures the thread isn't left running.
+        Called when the user clicks the "Disconnect" button.
         """
-        self.abort_system_check()
+        # add disconnect logic here
+        self.state_machine.disconnect_device()

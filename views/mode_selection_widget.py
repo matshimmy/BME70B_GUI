@@ -8,9 +8,13 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 
+from controllers.device_controller import DeviceController
+
 class ModeSelectionWidget(QWidget):
-    def __init__(self):
+    def __init__(self, device_controller: DeviceController):
         super().__init__()
+
+        self.device_controller = device_controller
 
         # Main vertical layout
         main_layout = QVBoxLayout()
@@ -53,6 +57,7 @@ class ModeSelectionWidget(QWidget):
 
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setObjectName("redButton")  # For QSS styling
+        self.disconnect_button.clicked.connect(self.device_controller.disconnect_device)
         bottom_layout.addWidget(self.disconnect_button)
 
         # Add bottom layout to main layout
