@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout
 )
-from PyQt5.QtGui import QMovie
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QSize
+
+import qtawesome as qta
 
 class SystemCheckWidget(QWidget):
     def __init__(self):
@@ -27,10 +28,10 @@ class SystemCheckWidget(QWidget):
         self.label_connection.setAlignment(Qt.AlignCenter)
         row_connection.addWidget(self.label_connection)
 
-        self.spinner_connection = QLabel()
-        movie_conn = QMovie("resources/spinner.gif")
-        self.spinner_connection.setMovie(movie_conn)
-        movie_conn.start()
+        self.spinner_connection = qta.IconWidget(size=QSize(50, 50))
+        spin_anim_conn = qta.Spin(self.spinner_connection, autostart=True)
+        spin_icon_conn = qta.icon('mdi.loading', color='#90D5FF', animation=spin_anim_conn)
+        self.spinner_connection.setIcon(spin_icon_conn)
         row_connection.addWidget(self.spinner_connection)
         main_layout.addLayout(row_connection)
 
@@ -41,10 +42,10 @@ class SystemCheckWidget(QWidget):
         self.label_power.setAlignment(Qt.AlignCenter)
         row_power.addWidget(self.label_power)
 
-        self.spinner_power = QLabel()
-        movie_power = QMovie("resources/spinner.gif")
-        self.spinner_power.setMovie(movie_power)
-        movie_power.start()
+        self.spinner_power = qta.IconWidget(size=QSize(50, 50))
+        spin_anim_power = qta.Spin(self.spinner_power, autostart=True)
+        spin_icon_power = qta.icon('mdi.loading', color='#90D5FF', animation=spin_anim_power)
+        self.spinner_power.setIcon(spin_icon_power)
         row_power.addWidget(self.spinner_power)
         main_layout.addLayout(row_power)
 
@@ -55,10 +56,10 @@ class SystemCheckWidget(QWidget):
         self.label_transmission.setAlignment(Qt.AlignCenter)
         row_transmission.addWidget(self.label_transmission)
 
-        self.spinner_transmission = QLabel()
-        movie_trans = QMovie("resources/spinner.gif")
-        self.spinner_transmission.setMovie(movie_trans)
-        movie_trans.start()
+        self.spinner_transmission = qta.IconWidget(size=QSize(50, 50))
+        spin_anim_trans = qta.Spin(self.spinner_transmission, autostart=True)
+        spin_icon_trans = qta.icon('mdi.loading', color='#90D5FF', animation=spin_anim_trans)
+        self.spinner_transmission.setIcon(spin_icon_trans)
         row_transmission.addWidget(self.spinner_transmission)
         main_layout.addLayout(row_transmission)
 
@@ -83,14 +84,18 @@ class SystemCheckWidget(QWidget):
         # Update "Connection"
         if self.model.is_connected:
             self.label_connection.setText(f"Connection: {self.model.connection_type}")
+            self.spinner_connection.setIcon(qta.icon('mdi.check-bold', color='#34b233'))
         else:
             self.label_connection.setText("Connection: NOT CONNECTED")
 
         # Update "Power Level"
-        self.label_power.setText(f"Power Level: {self.model.power_level}%")
+        if self.model.power_level != -1:
+            self.label_power.setText(f"Power Level: {self.model.power_level}%")
+            self.spinner_power.setIcon(qta.icon('mdi.check-bold', color='#34b233'))
 
         # Update "Transmission Testing"
         if self.model.transmission_ok:
             self.label_transmission.setText("Transmission: OK")
+            self.spinner_transmission.setIcon(qta.icon('mdi.check-bold', color='#34b233'))
         else:
             self.label_transmission.setText("Transmission: NOT TESTED")

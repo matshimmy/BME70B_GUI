@@ -13,7 +13,7 @@ class DeviceModel(QObject):
         super().__init__()
         self.connection_type = None       # "USB" or "Bluetooth"
         self.is_connected = False
-        self.power_level = "N/A"           # starting power
+        self.power_level = -1           # starting power
         self.transmission_ok = False
 
     def connect(self, conn_type: str):
