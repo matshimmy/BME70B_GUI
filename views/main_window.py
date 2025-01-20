@@ -7,7 +7,7 @@ from views.system_check_widget import SystemCheckWidget
 from views.mode_selection_widget import ModeSelectionWidget
 
 from worker import SystemCheckWorker
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, Qt
 
 windowTitlePrefix = "BME70B App | "
 
@@ -35,6 +35,8 @@ class MainWindow(QMainWindow):
 
         # Create the state machine
         self.state_machine = StateMachine()
+        # Listen for state changes
+        self.state_machine.state_changed.connect(self.on_state_changed)
 
         self.setWindowTitle(windowTitlePrefix + self.state_machine.current_state.value)
         self.setGeometry(100, 100, 800, 600)
@@ -71,20 +73,25 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central_widget)
         layout.addWidget(self.stacked_widget)
 
+    def on_state_changed(self, new_state):
+        """
+        Called when the state machine changes state.
+        """
+        self.setWindowTitle(windowTitlePrefix + new_state.value)
+        if new_state == AppState.IDLE:
+            self.stacked_widget.setCurrentIndex(0)
+        elif new_state == AppState.SYSTEM_CHECK:
+            self.stacked_widget.setCurrentIndex(1)
+        elif new_state == AppState.MODE_SELECTION:
+            self.stacked_widget.setCurrentIndex(2)
+
     def handle_connect_mcu(self, connection_type):
         """
         Called when user clicks "Connect via USB" or "Connect via Bluetooth."
         """
         self.state_machine.connect_device(connection_type)
 
-        # Retrieve the new state
-        new_state = self.state_machine.current_state
-        self.setWindowTitle(windowTitlePrefix + new_state.value)
-
-        # If we’re now in SYSTEM_CHECK, show that screen
-        if new_state == AppState.SYSTEM_CHECK:
-            self.stacked_widget.setCurrentIndex(1)
-            self.thread.start()  # This calls run_system_check in the worker
+        self.thread.start()  # This calls run_system_check in the worker
 
     def handle_connect_checked(self):
         # update model -> triggers model_changed signal
@@ -105,21 +112,17 @@ class MainWindow(QMainWindow):
 
         self.state_machine.do_system_check_done()
 
-        new_state = self.state_machine.current_state
-        self.setWindowTitle(windowTitlePrefix + new_state.value)
-
-        # Show the mode_selection_screen
-        self.stacked_widget.setCurrentIndex(2)
-
     def handle_disconnect(self):
         self.state_machine.disconnect_device()
-        self.stacked_widget.setCurrentIndex(0)
-        self.setWindowTitle(windowTitlePrefix + self.state_machine.current_state.value)
 
     def handle_abort_system_check(self):
+        # 1) Request interruption
+        self.thread.requestInterruption()
+
+        # 2) Now do your usual disconnect
         self.state_machine.disconnect_device()
-        self.stacked_widget.setCurrentIndex(0)
-        self.setWindowTitle(windowTitlePrefix + self.state_machine.current_state.value)
-        # Add the call to reset the system check widget
         self.system_check_screen.reset_spinners()
 
+        # 3) Quit the thread event loop and wait
+        self.thread.quit()
+        self.thread.wait()
