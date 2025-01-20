@@ -41,3 +41,9 @@ class StateMachine:
         Called when transmission check is done.
         """
         self.model.test_transmission()
+
+    def do_system_check_done(self):
+        """
+        Called when all system checks are done.
+        """
+        self.transition_to(AppState.MODE_SELECTION)

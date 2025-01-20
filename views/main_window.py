@@ -4,6 +4,7 @@ from controllers.state_machine import StateMachine
 
 from views.idle_widget import IdleWidget
 from views.system_check_widget import SystemCheckWidget
+from views.mode_selection_widget import ModeSelectionWidget
 
 from worker import SystemCheckWorker
 from PyQt5.QtCore import QThread
@@ -46,13 +47,15 @@ class MainWindow(QMainWindow):
         # Create screen widgets
         self.idle_screen = IdleWidget()
         self.system_check_screen = SystemCheckWidget()
+        self.mode_selection_screen = ModeSelectionWidget()
 
         # Provide the same model to the system check widget
         self.system_check_screen.setModel(self.state_machine.model)
 
-        # Add to the stacked widget
-        self.stacked_widget.addWidget(self.idle_screen)         # index 0
-        self.stacked_widget.addWidget(self.system_check_screen) # index 1
+        # Add them to the stacked widget
+        self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)
+        self.stacked_widget.addWidget(self.system_check_screen) # index 1 (SYSTEM_CHECK)
+        self.stacked_widget.addWidget(self.mode_selection_screen) # index 2 (MODE_SELECTION)
 
         # Connect signals from IdleWidget
         self.idle_screen.usb_button.clicked.connect(lambda: self.handle_connect_mcu('USB'))
@@ -60,6 +63,9 @@ class MainWindow(QMainWindow):
 
         # Connect signals from SystemCheckWidget
         self.system_check_screen.abort_button.clicked.connect(lambda: self.handle_abort_system_check())
+
+        # Connect signals for ModeSelectionWidget
+        self.mode_selection_screen.disconnect_button.clicked.connect(self.handle_disconnect)
 
         # Layout
         layout = QVBoxLayout(central_widget)
@@ -96,6 +102,19 @@ class MainWindow(QMainWindow):
         self.thread.quit()
         self.thread.wait()
         # now do next step or finalize
+
+        self.state_machine.do_system_check_done()
+
+        new_state = self.state_machine.current_state
+        self.setWindowTitle(windowTitlePrefix + new_state.value)
+
+        # Show the mode_selection_screen
+        self.stacked_widget.setCurrentIndex(2)
+
+    def handle_disconnect(self):
+        self.state_machine.disconnect_device()
+        self.stacked_widget.setCurrentIndex(0)
+        self.setWindowTitle(windowTitlePrefix + self.state_machine.current_state.value)
 
     def handle_abort_system_check(self):
         self.state_machine.disconnect_device()
