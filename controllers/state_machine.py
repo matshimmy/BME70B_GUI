@@ -19,6 +19,7 @@ class StateMachine(QObject):
         """
         Called to handle device connection logic from IDLE to SYSTEM_CHECK.
         """
+        self.model.disconnect() # Reset the model
         self.model.connect(connection_type)
         self.transition_to(AppState.SYSTEM_CHECK)
 

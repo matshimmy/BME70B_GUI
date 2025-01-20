@@ -7,7 +7,7 @@ from views.system_check_widget import SystemCheckWidget
 from views.mode_selection_widget import ModeSelectionWidget
 
 from worker import SystemCheckWorker
-from PyQt5.QtCore import QThread, Qt
+from PyQt5.QtCore import QThread
 
 windowTitlePrefix = "BME70B App | "
 
@@ -48,7 +48,12 @@ class MainWindow(QMainWindow):
 
         # Create screen widgets
         self.idle_screen = IdleWidget()
-        self.system_check_screen = SystemCheckWidget()
+        self.system_check_screen = SystemCheckWidget(
+            state_machine=self.state_machine,
+            worker_thread=self.thread,
+            worker=self.system_check_worker
+        )
+
         self.mode_selection_screen = ModeSelectionWidget()
 
         # Provide the same model to the system check widget
@@ -62,9 +67,6 @@ class MainWindow(QMainWindow):
         # Connect signals from IdleWidget
         self.idle_screen.usb_button.clicked.connect(lambda: self.handle_connect_mcu('USB'))
         self.idle_screen.bt_button.clicked.connect(lambda: self.handle_connect_mcu('Bluetooth'))
-
-        # Connect signals from SystemCheckWidget
-        self.system_check_screen.abort_button.clicked.connect(lambda: self.handle_abort_system_check())
 
         # Connect signals for ModeSelectionWidget
         self.mode_selection_screen.disconnect_button.clicked.connect(self.handle_disconnect)
@@ -114,15 +116,3 @@ class MainWindow(QMainWindow):
 
     def handle_disconnect(self):
         self.state_machine.disconnect_device()
-
-    def handle_abort_system_check(self):
-        # 1) Request interruption
-        self.thread.requestInterruption()
-
-        # 2) Now do your usual disconnect
-        self.state_machine.disconnect_device()
-        self.system_check_screen.reset_spinners()
-
-        # 3) Quit the thread event loop and wait
-        self.thread.quit()
-        self.thread.wait()

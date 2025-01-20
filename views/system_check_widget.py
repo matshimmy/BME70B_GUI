@@ -1,13 +1,19 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QSpacerItem, QSizePolicy
 )
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt, QSize, QThread
 
 import qtawesome as qta
 
+from controllers.state_machine import StateMachine
+from worker import SystemCheckWorker
+
 class SystemCheckWidget(QWidget):
-    def __init__(self):
+    def __init__(self, state_machine : StateMachine, worker_thread : QThread, worker : SystemCheckWorker):
         super().__init__()
+        self.state_machine = state_machine
+        self.worker_thread = worker_thread
+        self.worker = worker
 
         # The model will be set later via setModel(...)
         self.model = None
@@ -90,6 +96,7 @@ class SystemCheckWidget(QWidget):
 
         self.abort_button = QPushButton("Abort")
         self.abort_button.setObjectName("amberButton")  # Style defined in stylesheet
+        self.abort_button.clicked.connect(self.handle_abort)
         bottom_layout.addWidget(self.abort_button)
 
         # Outer layout to combine middle content and bottom button
@@ -182,3 +189,10 @@ class SystemCheckWidget(QWidget):
         else:
             self.label_transmission.setText("Transmission: NOT TESTED")
             self.spinner_transmission.setIcon(self.spin_icon_trans)
+
+    def handle_abort(self):
+        self.worker_thread.requestInterruption()
+        self.state_machine.disconnect_device()
+
+        self.worker_thread.quit()
+        self.worker_thread.wait()
