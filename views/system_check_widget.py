@@ -1,22 +1,20 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QSpacerItem, QSizePolicy
 )
-from PyQt5.QtCore import Qt, QSize, QThread
+from PyQt5.QtCore import Qt, QSize
 
 import qtawesome as qta
 
-from controllers.state_machine import StateMachine
-from worker import SystemCheckWorker
+from models.model import Model
+from controllers.device_controller import DeviceController
 
 class SystemCheckWidget(QWidget):
-    def __init__(self, state_machine : StateMachine, worker_thread : QThread, worker : SystemCheckWorker):
+    def __init__(self, model : Model, device_controller : DeviceController):
         super().__init__()
-        self.state_machine = state_machine
-        self.worker_thread = worker_thread
-        self.worker = worker
-
-        # The model will be set later via setModel(...)
-        self.model = None
+        self.device_controller = device_controller
+        self.model = model
+        # Whenever the model changes, call self.update_ui
+        self.model.model_changed.connect(self.update_ui)
 
         # Green check icon (reusable)
         self.green_check_icon = qta.icon('mdi.check-bold', color='#34b233')
@@ -96,7 +94,7 @@ class SystemCheckWidget(QWidget):
 
         self.abort_button = QPushButton("Abort")
         self.abort_button.setObjectName("amberButton")  # Style defined in stylesheet
-        self.abort_button.clicked.connect(self.handle_abort)
+        self.abort_button.clicked.connect(self.device_controller.abort_system_check)
         bottom_layout.addWidget(self.abort_button)
 
         # Outer layout to combine middle content and bottom button
@@ -108,14 +106,6 @@ class SystemCheckWidget(QWidget):
 
         # Initialize spinner icons for each row
         self.reset_spinners()
-
-    def setModel(self, model):
-        """
-        Assign the model and connect signals.
-        """
-        self.model = model
-        # Whenever the model changes, call self.update_ui
-        self.model.model_changed.connect(self.update_ui)
 
     def reset_spinners(self):
         """
@@ -189,10 +179,3 @@ class SystemCheckWidget(QWidget):
         else:
             self.label_transmission.setText("Transmission: NOT TESTED")
             self.spinner_transmission.setIcon(self.spin_icon_trans)
-
-    def handle_abort(self):
-        self.worker_thread.requestInterruption()
-        self.state_machine.disconnect_device()
-
-        self.worker_thread.quit()
-        self.worker_thread.wait()

@@ -1,14 +1,14 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from controllers.states import AppState
-from models.device_model import DeviceModel
+from models.model import Model
 
 class StateMachine(QObject):
     state_changed = pyqtSignal(AppState)
 
-    def __init__(self):
+    def __init__(self, model: Model):
         super().__init__()
         self.current_state = AppState.IDLE
-        self.model = DeviceModel()  # The model is part of the state machine
+        self.model = model  # The model is part of the state machine
 
     def transition_to(self, new_state):
         """Generic method to transition to a new state."""

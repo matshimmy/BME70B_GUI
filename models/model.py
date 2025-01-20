@@ -1,6 +1,6 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 
-class DeviceModel(QObject):
+class Model(QObject):
     """
     Holds data about device connections, power, transmission, etc.
     Emits signals when data changes to notify interested views or controllers.
