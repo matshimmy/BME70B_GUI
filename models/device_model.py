@@ -1,5 +1,3 @@
-# models/device_model.py
-
 from PyQt5.QtCore import QObject, pyqtSignal
 
 class DeviceModel(QObject):
@@ -15,17 +13,15 @@ class DeviceModel(QObject):
         super().__init__()
         self.connection_type = None       # "USB" or "Bluetooth"
         self.is_connected = False
-        self.power_level = 100           # starting power
+        self.power_level = "N/A"           # starting power
         self.transmission_ok = False
 
     def connect(self, conn_type: str):
         """Connect to the device via USB or Bluetooth."""
         self.connection_type = conn_type
-        self.is_connected = True
         
-        # Optionally reset or set defaults
+        # set defaults
         self.transmission_ok = False
-        # Emit signal to inform listeners that something changed
         self.model_changed.emit()
 
     def disconnect(self):
@@ -34,22 +30,26 @@ class DeviceModel(QObject):
         self.transmission_ok = False
         self.model_changed.emit()
 
+    def check_connection(self):
+        """
+        Placeholder logic for checking connection.
+        read actual data from the hardware.
+        """
+        self.is_connected = True
+        self.model_changed.emit()
+
     def check_power(self):
         """
         Placeholder logic for checking power.
         read actual data from the hardware.
         """
-        if self.is_connected:
-            # keep it at 100 for now
-            pass
+        # keep it at 100 for now
+        self.power_level = 100
         self.model_changed.emit()
 
     def test_transmission(self):
         """
         Test transmissions.
         """
-        if self.is_connected:
-            self.transmission_ok = True
-        else:
-            self.transmission_ok = False
+        self.transmission_ok = True
         self.model_changed.emit()

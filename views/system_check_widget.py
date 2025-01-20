@@ -8,7 +8,7 @@ class SystemCheckWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        # We will set this later via setModel(...)
+        # set later via setModel(...)
         self.model = None
 
         # Main vertical layout for the entire widget

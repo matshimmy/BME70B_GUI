@@ -24,18 +24,20 @@ class StateMachine:
             # log an error or handle invalid transitions
             pass
 
-    def do_system_check(self):
+    def do_system_check_connection(self):
         """
-        In SYSTEM_CHECK:
-        - Check power
-        - Test transmission
-        - Then transition to next state if everything is OK
+        Called when connection check is done.
         """
-        if self.current_state == AppState.SYSTEM_CHECK:
-            self.model.check_power()
-            self.model.test_transmission()
-            # transition to MODE_SELECTION if all goes well
-            # self.transition_to(AppState.MODE_SELECTION)
-        else:
-            # Handle error
-            pass
+        self.model.check_connection()
+
+    def do_system_check_power(self):
+        """
+        Called when power check is done.
+        """
+        self.model.check_power()
+
+    def do_system_test_transmission(self):
+        """
+        Called when transmission check is done.
+        """
+        self.model.test_transmission()

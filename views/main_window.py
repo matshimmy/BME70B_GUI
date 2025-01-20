@@ -5,11 +5,32 @@ from controllers.state_machine import StateMachine
 from views.idle_widget import IdleWidget
 from views.system_check_widget import SystemCheckWidget
 
+from worker import SystemCheckWorker
+from PyQt5.QtCore import QThread
+
 windowTitlePrefix = "BME70B App | "
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        ## Simulate the system check worker
+        self.thread = QThread(self)
+        self.system_check_worker = SystemCheckWorker()
+        
+        # Move the worker to its own thread
+        self.system_check_worker.moveToThread(self.thread)
+
+        # Connect signals
+        self.system_check_worker.connection_checked.connect(self.handle_connect_checked)
+        self.system_check_worker.power_checked.connect(self.handle_power_checked)
+        self.system_check_worker.transmission_checked.connect(self.handle_transmission_checked)
+        self.system_check_worker.finished.connect(self.handle_system_check_done)
+
+        # Connect the thread's started signal to the worker's slot that does the check
+        self.thread.started.connect(self.system_check_worker.run_system_check)
+        ## done simulating the system check worker
+
 
         # Create the state machine
         self.state_machine = StateMachine()
@@ -54,5 +75,21 @@ class MainWindow(QMainWindow):
         # If we’re now in SYSTEM_CHECK, show that screen
         if new_state == AppState.SYSTEM_CHECK:
             self.stacked_widget.setCurrentIndex(1)
-            # Optionally run system checks immediately
-            self.state_machine.do_system_check()
+            self.thread.start()  # This calls run_system_check in the worker
+
+    def handle_connect_checked(self):
+        # update model -> triggers model_changed signal
+        self.state_machine.do_system_check_connection()
+
+    def handle_power_checked(self):
+        # update model -> triggers model_changed signal
+        self.state_machine.do_system_check_power()
+
+    def handle_transmission_checked(self):
+        self.state_machine.do_system_test_transmission()
+
+    def handle_system_check_done(self):
+        # the worker completed system checks, so maybe transition states
+        self.thread.quit()
+        self.thread.wait()
+        # now do next step or finalize
