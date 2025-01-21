@@ -1,5 +1,5 @@
 from enum import Enum
 
-class AcquisitionType(Enum):
+class SimulationType(Enum):
     TEMPLATE = "Template"
     FULL_SIGNAL = "Full Signal"

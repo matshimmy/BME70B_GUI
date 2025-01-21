@@ -74,3 +74,23 @@ class StateMachine(QObject):
         Called to start the acquisition.
         """
         self.transition_to(AppState.RUNNING_ACQUISITION)
+
+    def transition_to_simulation_options(self):
+        """
+        Called to transition to the simulation options screen.
+        """
+        self.transition_to(AppState.SIMULATION_OPTIONS)
+
+    def update_simulation_options(self, simulation_type, transmission_rate):
+        """
+        Called to update the simulation options in the model.
+        """
+        self.model.simulation_type = simulation_type
+        self.model.transmission_rate = transmission_rate
+        self.model.model_changed.emit()
+
+    def start_simulation(self):
+        """
+        Called to start the simulation.
+        """
+        self.transition_to(AppState.RUNNING_SIMULATION)

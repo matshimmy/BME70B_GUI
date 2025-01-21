@@ -59,3 +59,7 @@ class Model(QObject):
         self.acquisition_type = None
         self.sampling_rate = None
 
+        # Simulation options
+        self.simulation_type = None
+        self.transmission_rate = None
+

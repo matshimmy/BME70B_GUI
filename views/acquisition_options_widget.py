@@ -34,8 +34,8 @@ class AcquisitionOptionsWidget(QWidget):
         radio_layout = QHBoxLayout()
         radio_layout.setAlignment(Qt.AlignCenter)
 
-        self.template_radio = QRadioButton("Template")
-        self.full_signal_radio = QRadioButton("Full Signal")
+        self.template_radio = QRadioButton(AcquisitionType.TEMPLATE.value)
+        self.full_signal_radio = QRadioButton(AcquisitionType.FULL_SIGNAL.value)
 
         self.template_radio.setChecked(True)
 
@@ -58,9 +58,6 @@ class AcquisitionOptionsWidget(QWidget):
         self.combo_sampling = QComboBox()
         self.combo_sampling.addItems(["30 Hz", "100 Hz", "200 Hz", "500 Hz"])
         self.combo_sampling.setCurrentIndex(1)  # default "100 Hz"
-
-        # If you want to react to changes:
-        # self.combo_sampling.currentIndexChanged.connect(self.on_sampling_changed)
 
         sampling_layout = QHBoxLayout()
         sampling_layout.setAlignment(Qt.AlignCenter)

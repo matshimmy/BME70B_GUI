@@ -39,6 +39,7 @@ class ModeSelectionWidget(QWidget):
 
         self.simulation_button = QPushButton("Simulation")
         self.simulation_button.setObjectName("blueButton")  # For QSS styling
+        self.simulation_button.clicked.connect(self.state_machine.transition_to_simulation_options)
         button_row.addWidget(self.simulation_button)
 
         center_spacer_right = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)

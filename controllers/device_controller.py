@@ -83,3 +83,10 @@ class DeviceController:
         """
         # add start acquisition logic here
         self.state_machine.start_acquisition()
+
+    def start_simulation(self):
+        """
+        Called when the user clicks the "Start" button.
+        """
+        # add start simulation logic here
+        self.state_machine.start_simulation()
