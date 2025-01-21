@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
-    QSizePolicy
+    QSizePolicy, QLabel
 )
 from PyQt5.QtCore import Qt
 
@@ -16,6 +16,13 @@ class RunningAcquisitionWidget(QWidget):
         # Main vertical layout
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
+
+        # Spacer at the top
+        main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+
+        self.label = QLabel("Signal acquisition algorithm to be implemented in Phase II")
+        self.label.setAlignment(Qt.AlignCenter)
+        main_layout.addWidget(self.label)
 
         # Spacer below the buttons
         main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
