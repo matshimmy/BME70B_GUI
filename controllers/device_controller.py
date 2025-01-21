@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QThread
-from worker import SystemCheckWorker
+from worker import Worker
 from controllers.state_machine import StateMachine
 
 class DeviceController:
@@ -12,7 +12,7 @@ class DeviceController:
         
         # Create the worker and thread
         self.thread = QThread()
-        self.worker = SystemCheckWorker()
+        self.worker = Worker()
         self.worker.moveToThread(self.thread)
 
         # Connect worker signals to methods in this controller
@@ -76,3 +76,11 @@ class DeviceController:
         """
         # add disconnect logic here
         self.state_machine.disconnect_device()
+
+    def start_acquisition(self):
+        """
+        Called when the user clicks the "Start" button.
+        """
+        pass
+        # add start acquisition logic here
+        # self.state_machine.start_acquisition()

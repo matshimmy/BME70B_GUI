@@ -2,7 +2,7 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 import time
 
-class SystemCheckWorker(QObject):
+class Worker(QObject):
     connection_checked = pyqtSignal()
     power_checked = pyqtSignal()
     transmission_checked = pyqtSignal()
@@ -17,21 +17,21 @@ class SystemCheckWorker(QObject):
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return  # Exit gracefully
-            time.sleep(1)
+            time.sleep(0)
         self.connection_checked.emit()
 
         # 2) Power check phase
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return
-            time.sleep(1)
+            time.sleep(2)
         self.power_checked.emit()
 
         # 3) Transmission check phase
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return
-            time.sleep(1)
+            time.sleep(0)
         self.transmission_checked.emit()
 
         self.finished.emit()

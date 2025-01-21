@@ -53,3 +53,9 @@ class StateMachine(QObject):
         Called when all system checks are done.
         """
         self.transition_to(AppState.MODE_SELECTION)
+
+    def transition_to_acquisition_options(self):
+        """
+        Called to transition to the acquisition options screen.
+        """
+        self.transition_to(AppState.ACQUISITION_OPTIONS)

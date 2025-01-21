@@ -6,6 +6,7 @@ from controllers.device_controller import DeviceController
 from views.idle_widget import IdleWidget
 from views.system_check_widget import SystemCheckWidget
 from views.mode_selection_widget import ModeSelectionWidget
+from views.acquisition_options_widget import AcquisitionOptionsWidget
 
 windowTitlePrefix = "BME70B App | "
 
@@ -32,12 +33,14 @@ class MainWindow(QMainWindow):
         # Create screen widgets
         self.idle_screen = IdleWidget(device_controller=self.device_controller)
         self.system_check_screen = SystemCheckWidget(model=self.state_machine.model, device_controller=self.device_controller)
-        self.mode_selection_screen = ModeSelectionWidget(device_controller=self.device_controller)
+        self.mode_selection_screen = ModeSelectionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.acquisition_options_screen = AcquisitionOptionsWidget(device_controller=self.device_controller)
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)
         self.stacked_widget.addWidget(self.system_check_screen) # index 1 (SYSTEM_CHECK)
         self.stacked_widget.addWidget(self.mode_selection_screen) # index 2 (MODE_SELECTION)
+        self.stacked_widget.addWidget(self.acquisition_options_screen) # index 3 (ACQUISITION_OPTIONS)
 
         # Layout
         layout = QVBoxLayout(central_widget)
@@ -54,3 +57,5 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(1)
         elif new_state == AppState.MODE_SELECTION:
             self.stacked_widget.setCurrentIndex(2)
+        elif new_state == AppState.ACQUISITION_OPTIONS:
+            self.stacked_widget.setCurrentIndex(3)

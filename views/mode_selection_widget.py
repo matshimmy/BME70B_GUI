@@ -9,12 +9,14 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 
 from controllers.device_controller import DeviceController
+from controllers.state_machine import StateMachine
 
 class ModeSelectionWidget(QWidget):
-    def __init__(self, device_controller: DeviceController):
+    def __init__(self, state_machine : StateMachine, device_controller: DeviceController):
         super().__init__()
 
         self.device_controller = device_controller
+        self.state_machine = state_machine
 
         # Main vertical layout
         main_layout = QVBoxLayout()
@@ -28,6 +30,7 @@ class ModeSelectionWidget(QWidget):
 
         self.acquisition_button = QPushButton("Acquisition")
         self.acquisition_button.setObjectName("blueButton")  # For QSS styling
+        self.acquisition_button.clicked.connect(self.state_machine.transition_to_acquisition_options)
         button_row.addWidget(self.acquisition_button)
 
         # Spacer to center the Simulation button
