@@ -1,21 +1,19 @@
 from PyQt5.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
-    QSpacerItem,
-    QSizePolicy,
-    QLabel
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
+    QSizePolicy, QLabel, QRadioButton, QComboBox, QButtonGroup
 )
 from PyQt5.QtCore import Qt
 
 from controllers.device_controller import DeviceController
+from controllers.state_machine import StateMachine
+from enums.acquisition_type import AcquisitionType
 
 class AcquisitionOptionsWidget(QWidget):
-    def __init__(self, device_controller : DeviceController):
+    def __init__(self, state_machine : StateMachine, device_controller: DeviceController):
         super().__init__()
-
         self.device_controller = device_controller
+        self.state_machine = state_machine
+
         # Main vertical layout
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
@@ -30,16 +28,52 @@ class AcquisitionOptionsWidget(QWidget):
         self.label.setAlignment(Qt.AlignCenter)
         options_layout.addWidget(self.label)
 
-        # Add radio buttons for template for full signal
+        # ---------------------------
+        # Radio Buttons for "Template" vs. "Full Signal"
+        # ---------------------------
+        radio_layout = QHBoxLayout()
+        radio_layout.setAlignment(Qt.AlignCenter)
 
-        # Add drop down menu with sampling rates 30 Hz, 100 Hz, 200 Hz, 500 Hz
+        self.template_radio = QRadioButton("Template")
+        self.full_signal_radio = QRadioButton("Full Signal")
+
+        self.template_radio.setChecked(True)
+
+        radio_layout.addWidget(self.template_radio)
+        radio_layout.addWidget(self.full_signal_radio)
+
+        options_layout.addLayout(radio_layout)
+
+        # QButtonGroup so we can see which button is checked more easily
+        self.radio_group = QButtonGroup()
+        self.radio_group.addButton(self.template_radio, 0)
+        self.radio_group.addButton(self.full_signal_radio, 1)
+
+        # ---------------------------
+        # Drop-down (ComboBox) for sampling rates
+        # ---------------------------
+        self.sampling_label = QLabel("Sampling Rate:")
+        self.sampling_label.setAlignment(Qt.AlignCenter)
+
+        self.combo_sampling = QComboBox()
+        self.combo_sampling.addItems(["30 Hz", "100 Hz", "200 Hz", "500 Hz"])
+        self.combo_sampling.setCurrentIndex(1)  # default "100 Hz"
+
+        # If you want to react to changes:
+        # self.combo_sampling.currentIndexChanged.connect(self.on_sampling_changed)
+
+        sampling_layout = QHBoxLayout()
+        sampling_layout.setAlignment(Qt.AlignCenter)
+        sampling_layout.addWidget(self.sampling_label)
+        sampling_layout.addWidget(self.combo_sampling)
+        options_layout.addLayout(sampling_layout)
 
         main_layout.addLayout(options_layout)
 
         # Spacer below the buttons
         main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        # Bottom layout for the Disconnect button
+        # Bottom layout for the Disconnect and Start buttons
         bottom_layout = QHBoxLayout()
 
         self.disconnect_button = QPushButton("Disconnect")
@@ -47,17 +81,35 @@ class AcquisitionOptionsWidget(QWidget):
         self.disconnect_button.clicked.connect(self.device_controller.disconnect_device)
         bottom_layout.addWidget(self.disconnect_button)
 
-        # Spacer to center the Simulation button
-        center_spacer_left = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        bottom_layout.addSpacerItem(center_spacer_left)
+        # Spacer to push the Start button to the right
+        bottom_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         self.start_button = QPushButton("Start")
         self.start_button.setObjectName("greenButton")
-        self.start_button.clicked.connect(self.device_controller.start_acquisition)
+        self.start_button.clicked.connect(self.on_start_acquisition)
         bottom_layout.addWidget(self.start_button)
 
-        # Add bottom layout to main layout
         main_layout.addLayout(bottom_layout)
-
-        # Set the main layout
         self.setLayout(main_layout)
+
+    def on_start_acquisition(self):
+        """
+        Called when the user clicks "Start."
+        Gather the selected acquisition type (template/full) and sampling rate,
+        and then pass them to the device controller or state machine as needed.
+        """
+        selected_radio_id = self.radio_group.checkedId()
+        if selected_radio_id == 0:
+            acquisition_type = AcquisitionType.TEMPLATE
+        else:
+            acquisition_type = AcquisitionType.FULL_SIGNAL
+
+        sampling_rate_str = self.combo_sampling.currentText()
+        # Convert "30 Hz" to integer or store the string
+        sampling_rate = int(sampling_rate_str.split()[0])
+
+        # Update state machine
+        self.state_machine.update_acquisition_options(acquisition_type, sampling_rate)
+
+        # Finally start the acquisition
+        self.device_controller.start_acquisition()

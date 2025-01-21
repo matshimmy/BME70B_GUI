@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QStackedWidget, QVBoxLayout
-from controllers.states import AppState
+from enums.app_state import AppState
 from controllers.state_machine import StateMachine
 from controllers.device_controller import DeviceController
 
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         self.idle_screen = IdleWidget(device_controller=self.device_controller)
         self.system_check_screen = SystemCheckWidget(model=self.state_machine.model, device_controller=self.device_controller)
         self.mode_selection_screen = ModeSelectionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
-        self.acquisition_options_screen = AcquisitionOptionsWidget(device_controller=self.device_controller)
+        self.acquisition_options_screen = AcquisitionOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)

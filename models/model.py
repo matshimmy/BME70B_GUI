@@ -11,10 +11,7 @@ class Model(QObject):
 
     def __init__(self):
         super().__init__()
-        self.connection_type = None       # "USB" or "Bluetooth"
-        self.is_connected = False
-        self.power_level = -1           # starting power
-        self.transmission_ok = False
+        self.reset_model()
 
     def connect(self, conn_type: str):
         """Connect to the device via USB or Bluetooth."""
@@ -25,10 +22,7 @@ class Model(QObject):
         self.model_changed.emit()
 
     def disconnect(self):
-        self.connection_type = None
-        self.is_connected = False
-        self.power_level = -1
-        self.transmission_ok = False
+        self.reset_model()
         self.model_changed.emit()
 
     def check_connection(self):
@@ -54,3 +48,14 @@ class Model(QObject):
         """
         self.transmission_ok = True
         self.model_changed.emit()
+
+    def reset_model(self):
+        self.connection_type = None       # "USB" or "Bluetooth"
+        self.is_connected = False
+        self.power_level = -1           # starting power
+        self.transmission_ok = False
+
+        # Acquisition options
+        self.acquisition_type = None
+        self.sampling_rate = None
+

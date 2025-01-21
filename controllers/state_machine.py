@@ -1,5 +1,6 @@
 from PyQt5.QtCore import QObject, pyqtSignal
-from controllers.states import AppState
+from enums.app_state import AppState
+from enums.acquisition_type import AcquisitionType
 from models.model import Model
 
 class StateMachine(QObject):
@@ -59,3 +60,11 @@ class StateMachine(QObject):
         Called to transition to the acquisition options screen.
         """
         self.transition_to(AppState.ACQUISITION_OPTIONS)
+    
+    def update_acquisition_options(self, acquisition_type: AcquisitionType, sampling_rate: int):
+        """
+        Called to update the acquisition options in the model.
+        """
+        self.model.acquisition_type = acquisition_type
+        self.model.sampling_rate = sampling_rate
+        self.model.model_changed.emit()

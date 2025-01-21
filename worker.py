@@ -17,21 +17,21 @@ class Worker(QObject):
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return  # Exit gracefully
-            time.sleep(0)
+            time.sleep(1)
         self.connection_checked.emit()
 
         # 2) Power check phase
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return
-            time.sleep(2)
+            time.sleep(1)
         self.power_checked.emit()
 
         # 3) Transmission check phase
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return
-            time.sleep(0)
+            time.sleep(1)
         self.transmission_checked.emit()
 
         self.finished.emit()
