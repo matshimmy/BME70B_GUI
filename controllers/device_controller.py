@@ -81,6 +81,5 @@ class DeviceController:
         """
         Called when the user clicks the "Start" button.
         """
-        pass
         # add start acquisition logic here
-        # self.state_machine.start_acquisition()
+        self.state_machine.start_acquisition()

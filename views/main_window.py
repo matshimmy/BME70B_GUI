@@ -7,6 +7,7 @@ from views.idle_widget import IdleWidget
 from views.system_check_widget import SystemCheckWidget
 from views.mode_selection_widget import ModeSelectionWidget
 from views.acquisition_options_widget import AcquisitionOptionsWidget
+from views.running_acquisition_widget import RunningAcquisitionWidget
 
 windowTitlePrefix = "BME70B App | "
 
@@ -35,12 +36,14 @@ class MainWindow(QMainWindow):
         self.system_check_screen = SystemCheckWidget(model=self.state_machine.model, device_controller=self.device_controller)
         self.mode_selection_screen = ModeSelectionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.acquisition_options_screen = AcquisitionOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.running_acquisition_screen = RunningAcquisitionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)
         self.stacked_widget.addWidget(self.system_check_screen) # index 1 (SYSTEM_CHECK)
         self.stacked_widget.addWidget(self.mode_selection_screen) # index 2 (MODE_SELECTION)
         self.stacked_widget.addWidget(self.acquisition_options_screen) # index 3 (ACQUISITION_OPTIONS)
+        self.stacked_widget.addWidget(self.running_acquisition_screen) # index 4 (RUNNING_ACQUISITION)
 
         # Layout
         layout = QVBoxLayout(central_widget)
@@ -59,3 +62,5 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(2)
         elif new_state == AppState.ACQUISITION_OPTIONS:
             self.stacked_widget.setCurrentIndex(3)
+        elif new_state == AppState.RUNNING_ACQUISITION:
+            self.stacked_widget.setCurrentIndex(4)

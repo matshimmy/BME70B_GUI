@@ -68,3 +68,9 @@ class StateMachine(QObject):
         self.model.acquisition_type = acquisition_type
         self.model.sampling_rate = sampling_rate
         self.model.model_changed.emit()
+
+    def start_acquisition(self):
+        """
+        Called to start the acquisition.
+        """
+        self.transition_to(AppState.RUNNING_ACQUISITION)
