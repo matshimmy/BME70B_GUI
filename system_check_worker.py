@@ -1,8 +1,10 @@
-# worker.py
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 import time
 
-class Worker(QObject):
+class SystemCheckWorker(QObject):
+    """
+    Worker dedicated to running the system check in a separate thread.
+    """
     connection_checked = pyqtSignal()
     power_checked = pyqtSignal()
     transmission_checked = pyqtSignal()
@@ -10,30 +12,31 @@ class Worker(QObject):
 
     def run_system_check(self):
         """
-        Perform each check, but break the 2-second sleeps into 1-second chunks
-        so we can check for interruption mid-sleep.
+        Perform each check in ~7 seconds total,
+        with checks for interruption after each 1-second sleep.
         """
-        # 1) Connection check phase (2 seconds total)
+        # 1) Connection check (2 seconds)
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
-                return  # Exit gracefully
+                return
             time.sleep(1)
         self.connection_checked.emit()
 
-        # 2) Power check phase
+        # 2) Power check (2 seconds)
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return
             time.sleep(1)
         self.power_checked.emit()
 
-        # 3) Transmission check phase
+        # 3) Transmission check (2 seconds)
         for _ in range(2):
             if QThread.currentThread().isInterruptionRequested():
                 return
             time.sleep(1)
         self.transmission_checked.emit()
 
-        time.sleep(1)
-
-        self.finished.emit()
+        # Final 1-second pause
+        if not QThread.currentThread().isInterruptionRequested():
+            time.sleep(1)
+            self.finished.emit()

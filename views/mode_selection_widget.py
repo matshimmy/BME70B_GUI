@@ -62,7 +62,7 @@ class ModeSelectionWidget(QWidget):
 
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setObjectName("redButton")  # For QSS styling
-        self.disconnect_button.clicked.connect(self.device_controller.disconnect_device)
+        self.disconnect_button.clicked.connect(self.device_controller.start_graceful_disconnect)
         bottom_layout.addWidget(self.disconnect_button)
 
         # Add bottom layout to main layout

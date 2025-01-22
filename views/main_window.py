@@ -12,6 +12,7 @@ from views.simulation_options_widget import SimulationOptionsWidget
 from views.running_simulation_widget import RunningSimulationWidget
 from views.stimulation_options_widget import StimulationOptionsWidget
 from views.running_stimulation_widget import RunningStimulationWidget
+from views.graceful_disconnect_widget import GracefulDisconnectWidget
 
 windowTitlePrefix = "BME70B App | "
 
@@ -45,6 +46,7 @@ class MainWindow(QMainWindow):
         self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.stimulation_options_screen = StimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_stimulation_screen = RunningStimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.graceful_disconnect_screen = GracefulDisconnectWidget()
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)
@@ -56,6 +58,7 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.running_simulation_screen) # index 6 (RUNNING_SIMULATION)
         self.stacked_widget.addWidget(self.stimulation_options_screen) # index 7 (STIMULATION_OPTIONS)
         self.stacked_widget.addWidget(self.running_stimulation_screen) # index 8 (RUNNING_STIMULATION)
+        self.stacked_widget.addWidget(self.graceful_disconnect_screen) # index 9 (GRACEFUL_DISCONNECT)
 
         # Layout
         layout = QVBoxLayout(central_widget)
@@ -84,3 +87,5 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(7)
         elif new_state == AppState.RUNNING_STIMULATION:
             self.stacked_widget.setCurrentIndex(8)
+        elif new_state == AppState.GRACEFUL_DISCONNECT:
+            self.stacked_widget.setCurrentIndex(9)

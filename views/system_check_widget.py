@@ -143,9 +143,6 @@ class SystemCheckWidget(QWidget):
         Slot that updates the widget based on the model's current state.
         Called automatically whenever the model emits model_changed.
         """
-        if not self.model:
-            return
-
         # ---------------------------
         # Connection
         # ---------------------------

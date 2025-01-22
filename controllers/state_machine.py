@@ -121,3 +121,15 @@ class StateMachine(QObject):
         Called to start the stimulation.
         """
         self.transition_to(AppState.RUNNING_STIMULATION)
+
+    def do_graceful_disconnect(self):
+        """
+        Called when user requests a graceful disconnect.
+        """
+        self.transition_to(AppState.GRACEFUL_DISCONNECT)
+
+    def do_graceful_disconnect_done(self):
+        """
+        Called when the worker finishes graceful disconnect.
+        """
+        self.transition_to(AppState.IDLE)

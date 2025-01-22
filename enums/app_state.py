@@ -10,3 +10,4 @@ class AppState(Enum):
     RUNNING_ACQUISITION = "Running Acquisition"
     RUNNING_SIMULATION = "Running Simulation"
     RUNNING_STIMULATION = "Running Stimulation"
+    GRACEFUL_DISCONNECT = "Graceful Disconnect"
