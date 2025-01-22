@@ -11,6 +11,7 @@ from views.running_acquisition_widget import RunningAcquisitionWidget
 from views.simulation_options_widget import SimulationOptionsWidget
 from views.running_simulation_widget import RunningSimulationWidget
 from views.stimulation_options_widget import StimulationOptionsWidget
+from views.running_stimulation_widget import RunningStimulationWidget
 
 windowTitlePrefix = "BME70B App | "
 
@@ -43,6 +44,7 @@ class MainWindow(QMainWindow):
         self.simulation_options_screen = SimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.stimulation_options_screen = StimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.running_stimulation_screen = RunningStimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)
@@ -53,6 +55,7 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.simulation_options_screen) # index 5 (SIMULATION_OPTIONS)
         self.stacked_widget.addWidget(self.running_simulation_screen) # index 6 (RUNNING_SIMULATION)
         self.stacked_widget.addWidget(self.stimulation_options_screen) # index 7 (STIMULATION_OPTIONS)
+        self.stacked_widget.addWidget(self.running_stimulation_screen) # index 8 (RUNNING_STIMULATION)
 
         # Layout
         layout = QVBoxLayout(central_widget)
@@ -79,3 +82,5 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(6)
         elif new_state == AppState.STIMULATION_OPTIONS:
             self.stacked_widget.setCurrentIndex(7)
+        elif new_state == AppState.RUNNING_STIMULATION:
+            self.stacked_widget.setCurrentIndex(8)
