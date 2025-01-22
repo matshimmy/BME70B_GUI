@@ -116,7 +116,7 @@ class DeviceController:
             self.disconnect_running = True
             self.disconnectThread.start()
 
-    def abort_graceful_disconnect(self):
+    def force_disconnect(self):
         """
         Cancels an ongoing graceful disconnect by requesting interruption 
         and stopping the thread.
@@ -125,9 +125,7 @@ class DeviceController:
         """
         if self.disconnect_running:
             self.disconnectThread.requestInterruption()
-            # Potentially call some 'disconnect_device' or forcibly set IDLE
-            # e.g. self.state_machine.disconnect_device() or do_graceful_disconnect_done()
-
+            self.state_machine.disconnect_device()
             self.disconnectThread.quit()
             self.disconnectThread.wait()
             self.disconnect_running = False
@@ -138,14 +136,13 @@ class DeviceController:
         Worker signals that the "Ending Connection" step is finished.
         Optionally, update the model or log progress.
         """
-        # self.model.xxx = ...
-        pass
+        self.state_machine.do_graceful_disconnect_conn()
 
     def handle_disconnect_power_done(self):
-        pass
+        self.state_machine.do_graceful_disconnect_power()
 
     def handle_disconnect_trans_done(self):
-        pass
+        self.state_machine.do_graceful_disconnect_trans()
 
     def handle_graceful_disconnect_done(self):
         """

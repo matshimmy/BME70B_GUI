@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
         self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.stimulation_options_screen = StimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_stimulation_screen = RunningStimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
-        self.graceful_disconnect_screen = GracefulDisconnectWidget()
+        self.graceful_disconnect_screen = GracefulDisconnectWidget(model=self.state_machine.model, device_controller=self.device_controller)
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)

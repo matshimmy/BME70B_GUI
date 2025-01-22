@@ -1,69 +1,88 @@
+# controllers/state_machine.py
+
 from PyQt5.QtCore import QObject, pyqtSignal
 from enums.app_state import AppState
 from enums.acquisition_type import AcquisitionType
 from models.model import Model
 
 class StateMachine(QObject):
+    """
+    The StateMachine (or 'StateController') manages all high-level application states
+    (IDLE, SYSTEM_CHECK, MODE_SELECTION, ACQUISITION_OPTIONS, etc.), and interacts
+    with the Model to store or reset data accordingly.
+    """
     state_changed = pyqtSignal(AppState)
 
     def __init__(self):
         super().__init__()
         self.current_state = AppState.IDLE
-        self.model = Model()  # The model is part of the state machine
+        self.model = Model()
 
-    def transition_to(self, new_state : AppState):
-        """Generic method to transition to a new state."""
+    # --------------------------------------------------------------------------
+    # INTERNAL: Generic State Transition
+    # --------------------------------------------------------------------------
+    def transition_to(self, new_state: AppState):
+        """
+        Moves the application from the current state to 'new_state'
+        and emits state_changed, so the UI can switch screens.
+        """
         self.current_state = new_state
         self.state_changed.emit(new_state)
 
+    # --------------------------------------------------------------------------
+    # BASIC CONNECT / DISCONNECT
+    # --------------------------------------------------------------------------
     def connect_device(self, connection_type: str):
         """
-        Called to handle device connection logic from IDLE to SYSTEM_CHECK.
+        From IDLE to SYSTEM_CHECK, resetting the model, then connecting.
         """
-        self.model.disconnect() # Reset the model
+        self.model.disconnect()  # reset model fully
         self.model.connect(connection_type)
         self.transition_to(AppState.SYSTEM_CHECK)
 
     def disconnect_device(self):
         """
-        Called to handle device disconnection logic from SYSTEM_CHECK to IDLE.
+        A direct / immediate disconnect: reset the model, go to IDLE.
         """
         self.model.disconnect()
         self.transition_to(AppState.IDLE)
 
+    # --------------------------------------------------------------------------
+    # SYSTEM CHECK
+    # --------------------------------------------------------------------------
     def do_system_check_connection(self):
         """
-        Called when connection check is done.
+        Worker step: system check for connection. Updates model if success.
         """
         self.model.check_connection()
 
     def do_system_check_power(self):
         """
-        Called when power check is done.
+        Worker step: system check for power level.
         """
         self.model.check_power()
 
     def do_system_test_transmission(self):
         """
-        Called when transmission check is done.
+        Worker step: system check for transmission.
         """
         self.model.test_transmission()
 
     def do_system_check_done(self):
         """
-        Called when all system checks are done.
+        After all system check steps complete, move to MODE_SELECTION.
         """
         self.transition_to(AppState.MODE_SELECTION)
 
+    # --------------------------------------------------------------------------
+    # ACQUISITION
+    # --------------------------------------------------------------------------
     def transition_to_acquisition_options(self):
-        """
-        Called to transition to the acquisition options screen.
-        """
         self.transition_to(AppState.ACQUISITION_OPTIONS)
     
     def update_acquisition_options(self, acquisition_type: AcquisitionType, sampling_rate: int):
         """
-        Called to update the acquisition options in the model.
+        Store the acquisition options in the model.
         """
         self.model.acquisition_type = acquisition_type
         self.model.sampling_rate = sampling_rate
@@ -71,14 +90,14 @@ class StateMachine(QObject):
 
     def start_acquisition(self):
         """
-        Called to start the acquisition.
+        Proceed to RUNNING_ACQUISITION state.
         """
         self.transition_to(AppState.RUNNING_ACQUISITION)
 
+    # --------------------------------------------------------------------------
+    # SIMULATION
+    # --------------------------------------------------------------------------
     def transition_to_simulation_options(self):
-        """
-        Called to transition to the simulation options screen.
-        """
         self.transition_to(AppState.SIMULATION_OPTIONS)
 
     def update_simulation_options(
@@ -86,7 +105,9 @@ class StateMachine(QObject):
         muscle_artifact=False, random_artifact=False, 
         sixty_hz_artifact=False, custom_csv=None
     ):
-        # Store in the model
+        """
+        Store the simulation options in the model.
+        """
         self.model.simulation_type = simulation_type
         self.model.transmission_rate = transmission_rate
         self.model.muscle_artifact = muscle_artifact
@@ -96,20 +117,17 @@ class StateMachine(QObject):
         self.model.model_changed.emit()
 
     def start_simulation(self):
-        """
-        Called to start the simulation.
-        """
         self.transition_to(AppState.RUNNING_SIMULATION)
 
+    # --------------------------------------------------------------------------
+    # STIMULATION
+    # --------------------------------------------------------------------------
     def transition_to_stimulation_options(self):
-        """
-        Called to transition to the stimulation options screen.
-        """
         self.transition_to(AppState.STIMULATION_OPTIONS)
 
     def update_stimulation_options(self, frequency: int, pulse_width: int, current: int):
         """
-        Called to update the stimulation options in the model.
+        Store the stimulation options in the model.
         """
         self.model.stimulation_frequency = frequency
         self.model.stimulation_pulse_width = pulse_width
@@ -117,19 +135,37 @@ class StateMachine(QObject):
         self.model.model_changed.emit()
 
     def start_stimulation(self):
-        """
-        Called to start the stimulation.
-        """
         self.transition_to(AppState.RUNNING_STIMULATION)
 
+    # --------------------------------------------------------------------------
+    # GRACEFUL DISCONNECT
+    # --------------------------------------------------------------------------
     def do_graceful_disconnect(self):
         """
-        Called when user requests a graceful disconnect.
+        The user wants a spinner-based, multi-step disconnect process.
         """
         self.transition_to(AppState.GRACEFUL_DISCONNECT)
 
+    def do_graceful_disconnect_conn(self):
+        """
+        Worker step: graceful disconnect for connection.
+        """
+        self.model.set_disconnect_conn_done()
+
+    def do_graceful_disconnect_power(self):
+        """
+        Worker step: graceful disconnect for power.
+        """
+        self.model.set_disconnect_power_done()
+
+    def do_graceful_disconnect_trans(self):
+        """
+        Worker step: graceful disconnect for transmission.
+        """
+        self.model.set_disconnect_trans_done()
+
     def do_graceful_disconnect_done(self):
         """
-        Called when the worker finishes graceful disconnect.
+        Once the graceful disconnect worker finishes, we revert to IDLE.
         """
         self.transition_to(AppState.IDLE)
