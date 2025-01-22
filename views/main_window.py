@@ -9,6 +9,7 @@ from views.mode_selection_widget import ModeSelectionWidget
 from views.acquisition_options_widget import AcquisitionOptionsWidget
 from views.running_acquisition_widget import RunningAcquisitionWidget
 from views.simulation_options_widget import SimulationOptionsWidget
+from views.running_simulation_widget import RunningSimulationWidget
 
 windowTitlePrefix = "BME70B App | "
 
@@ -39,6 +40,7 @@ class MainWindow(QMainWindow):
         self.acquisition_options_screen = AcquisitionOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_acquisition_screen = RunningAcquisitionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.simulation_options_screen = SimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)
@@ -47,6 +49,7 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.acquisition_options_screen) # index 3 (ACQUISITION_OPTIONS)
         self.stacked_widget.addWidget(self.running_acquisition_screen) # index 4 (RUNNING_ACQUISITION)
         self.stacked_widget.addWidget(self.simulation_options_screen) # index 5 (SIMULATION_OPTIONS)
+        self.stacked_widget.addWidget(self.running_simulation_screen) # index 6 (RUNNING_SIMULATION)
 
         # Layout
         layout = QVBoxLayout(central_widget)
@@ -69,3 +72,5 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(4)
         elif new_state == AppState.SIMULATION_OPTIONS:
             self.stacked_widget.setCurrentIndex(5)
+        elif new_state == AppState.RUNNING_SIMULATION:
+            self.stacked_widget.setCurrentIndex(6)
