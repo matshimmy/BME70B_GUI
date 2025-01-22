@@ -81,12 +81,18 @@ class StateMachine(QObject):
         """
         self.transition_to(AppState.SIMULATION_OPTIONS)
 
-    def update_simulation_options(self, simulation_type, transmission_rate):
-        """
-        Called to update the simulation options in the model.
-        """
+    def update_simulation_options(
+        self, simulation_type, transmission_rate, 
+        muscle_artifact=False, random_artifact=False, 
+        sixty_hz_artifact=False, custom_csv=None
+    ):
+        # Store in the model
         self.model.simulation_type = simulation_type
         self.model.transmission_rate = transmission_rate
+        self.model.muscle_artifact = muscle_artifact
+        self.model.random_artifact = random_artifact
+        self.model.sixty_hz_artifact = sixty_hz_artifact
+        self.model.custom_csv_path = custom_csv
         self.model.model_changed.emit()
 
     def start_simulation(self):

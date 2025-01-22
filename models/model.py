@@ -63,3 +63,11 @@ class Model(QObject):
         self.simulation_type = None
         self.transmission_rate = None
 
+        # Simulation options
+        self.simulation_type = None
+        self.transmission_rate = None
+        self.muscle_artifact = False
+        self.random_artifact = False
+        self.sixty_hz_artifact = False
+        self.custom_csv_path = None
+
