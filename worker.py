@@ -34,4 +34,6 @@ class Worker(QObject):
             time.sleep(1)
         self.transmission_checked.emit()
 
+        time.sleep(1)
+
         self.finished.emit()
