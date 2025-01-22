@@ -90,3 +90,10 @@ class DeviceController:
         """
         # add start simulation logic here
         self.state_machine.start_simulation()
+
+    def start_stimulation(self):
+        """
+        Called when the user clicks the "Start" button.
+        """
+        # add start stimulation logic here
+        self.state_machine.start_stimulation()

@@ -48,6 +48,7 @@ class ModeSelectionWidget(QWidget):
         # Stimulation button and spacer to push it to the right
         self.stimulation_button = QPushButton("Stimulation")
         self.stimulation_button.setObjectName("amberButton")  # For QSS styling
+        self.stimulation_button.clicked.connect(self.state_machine.transition_to_stimulation_options)
         button_row.addWidget(self.stimulation_button)
 
         main_layout.addLayout(button_row)

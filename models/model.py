@@ -62,12 +62,13 @@ class Model(QObject):
         # Simulation options
         self.simulation_type = None
         self.transmission_rate = None
-
-        # Simulation options
-        self.simulation_type = None
-        self.transmission_rate = None
         self.muscle_artifact = False
         self.random_artifact = False
         self.sixty_hz_artifact = False
         self.custom_csv_path = None
+
+        # Stimulation options
+        self.stimulation_frequency = None
+        self.stimulation_pulse_width = None
+        self.stimulation_current = None
 

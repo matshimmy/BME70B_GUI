@@ -100,3 +100,24 @@ class StateMachine(QObject):
         Called to start the simulation.
         """
         self.transition_to(AppState.RUNNING_SIMULATION)
+
+    def transition_to_stimulation_options(self):
+        """
+        Called to transition to the stimulation options screen.
+        """
+        self.transition_to(AppState.STIMULATION_OPTIONS)
+
+    def update_stimulation_options(self, frequency: int, pulse_width: int, current: int):
+        """
+        Called to update the stimulation options in the model.
+        """
+        self.model.stimulation_frequency = frequency
+        self.model.stimulation_pulse_width = pulse_width
+        self.model.stimulation_current = current
+        self.model.model_changed.emit()
+
+    def start_stimulation(self):
+        """
+        Called to start the stimulation.
+        """
+        self.transition_to(AppState.RUNNING_STIMULATION)
