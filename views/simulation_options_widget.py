@@ -23,19 +23,34 @@ class SimulationOptionsWidget(QWidget):
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
 
+        # ---------------------------
+        # Back Button at the Top-Left
+        # ---------------------------
+        back_button_layout = QHBoxLayout()
+        self.back_button = QPushButton(" ← ")
+        self.back_button.setObjectName("backButton")
+        self.back_button.clicked.connect(self.state_machine.on_back_options_clicked)
+
+        # Add an expanding spacer to push the button to the left
+        back_button_layout.addWidget(self.back_button)
+        back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        # Add the back button layout to the main layout
+        main_layout.addLayout(back_button_layout)
+
         # Spacer at the top
         main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         options_layout = QVBoxLayout()
         options_layout.setAlignment(Qt.AlignCenter)
 
+        # ---------------------------
+        # Radio Buttons for "Template" vs. "Full Signal"
+        # ---------------------------
         self.label = QLabel("Simulation Type")
         self.label.setAlignment(Qt.AlignCenter)
         options_layout.addWidget(self.label)
 
-        # ---------------------------
-        # Radio Buttons for "Template" vs. "Full Signal"
-        # ---------------------------
         radio_layout = QHBoxLayout()
         radio_layout.setAlignment(Qt.AlignCenter)
 

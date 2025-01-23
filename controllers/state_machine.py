@@ -169,3 +169,12 @@ class StateMachine(QObject):
         Once the graceful disconnect worker finishes, we revert to IDLE.
         """
         self.transition_to(AppState.IDLE)
+
+    # --------------------------------------------------------------------------
+    # GENERIC
+    # --------------------------------------------------------------------------
+    def on_back_options_clicked(self):
+        """
+        If the user clicks 'Back' on any options screen, we return to MODE_SELECTION.
+        """
+        self.transition_to(AppState.MODE_SELECTION)

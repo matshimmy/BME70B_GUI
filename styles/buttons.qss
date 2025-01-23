@@ -77,3 +77,20 @@ QPushButton#greenButton:pressed {
 QPushButton#greenButton:hover {
     background-color: #2ebf4f;
 }
+
+/* Back Button Style */
+QPushButton#backButton {
+    background-color: transparent;
+    border: 1px solid gray;
+    border-radius: 4px;
+    font-size: 40px;
+    color: #333333;
+}
+
+QPushButton#backButton:hover {
+    color: #007bff; /* Highlight color on hover */
+}
+
+QPushButton#backButton:pressed {
+    color: #0056b3; /* Darker color when pressed */
+}
