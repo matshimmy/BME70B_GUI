@@ -1,7 +1,7 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 import time
 
-class SystemCheckWorker(QObject):
+class SystemCheckService(QObject):
     """
     Worker dedicated to running the system check in a separate thread.
     """

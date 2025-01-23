@@ -1,55 +1,55 @@
 from PyQt5.QtCore import QThread
-from system_check_worker import SystemCheckWorker
-from graceful_disconnect_worker import GracefulDisconnectWorker
+from services.system_check_service import SystemCheckService
+from services.graceful_disconnect_service import GracefulDisconnectService
 from controllers.state_machine import StateMachine
 
 class DeviceController:
     """
-    The DeviceController manages two separate workers and threads:
-      1) systemCheckThread / SystemCheckWorker, for system checks
-      2) disconnectThread / GracefulDisconnectWorker, for graceful disconnect
+    The DeviceController manages two separate Services and threads:
+      1) systemCheckThread / SystemCheckService, for system checks
+      2) disconnectThread / GracefulDisconnectService, for graceful disconnect
     Each thread is started/stopped independently.
     """
     def __init__(self, state_machine: StateMachine):
         self.state_machine = state_machine
 
         # ----------------------------------------------------------------
-        # System Check Thread & Worker
+        # System Check Thread & Service
         # ----------------------------------------------------------------
         self.systemCheckThread = QThread()
-        self.systemCheckWorker = SystemCheckWorker()
+        self.systemCheckService = SystemCheckService()
 
-        # Move the systemCheckWorker to the systemCheckThread
-        self.systemCheckWorker.moveToThread(self.systemCheckThread)
+        # Move the systemCheckService to the systemCheckThread
+        self.systemCheckService.moveToThread(self.systemCheckThread)
 
         # Connect the systemCheckThread's started signal
-        self.systemCheckThread.started.connect(self.systemCheckWorker.run_system_check)
+        self.systemCheckThread.started.connect(self.systemCheckService.run_system_check)
 
         # Connect system check signals to local handlers
-        self.systemCheckWorker.connection_checked.connect(self.handle_connect_checked)
-        self.systemCheckWorker.power_checked.connect(self.handle_power_checked)
-        self.systemCheckWorker.transmission_checked.connect(self.handle_transmission_checked)
-        self.systemCheckWorker.finished.connect(self.handle_system_check_done)
+        self.systemCheckService.connection_checked.connect(self.handle_connect_checked)
+        self.systemCheckService.power_checked.connect(self.handle_power_checked)
+        self.systemCheckService.transmission_checked.connect(self.handle_transmission_checked)
+        self.systemCheckService.finished.connect(self.handle_system_check_done)
 
         self.system_check_running = False
 
         # ----------------------------------------------------------------
-        # Graceful Disconnect Thread & Worker
+        # Graceful Disconnect Thread & Service
         # ----------------------------------------------------------------
         self.disconnectThread = QThread()
-        self.disconnectWorker = GracefulDisconnectWorker()
+        self.disconnectService = GracefulDisconnectService()
 
-        # Move the gracefulDisconnectWorker to the disconnectThread
-        self.disconnectWorker.moveToThread(self.disconnectThread)
+        # Move the gracefulDisconnectService to the disconnectThread
+        self.disconnectService.moveToThread(self.disconnectThread)
 
         # Connect the thread's started signal to run_graceful_disconnect
-        self.disconnectThread.started.connect(self.disconnectWorker.run_graceful_disconnect)
+        self.disconnectThread.started.connect(self.disconnectService.run_graceful_disconnect)
 
         # Connect graceful disconnect signals to local handlers
-        self.disconnectWorker.disconnect_conn_done.connect(self.handle_disconnect_conn_done)
-        self.disconnectWorker.disconnect_power_done.connect(self.handle_disconnect_power_done)
-        self.disconnectWorker.disconnect_trans_done.connect(self.handle_disconnect_trans_done)
-        self.disconnectWorker.disconnect_finished.connect(self.handle_graceful_disconnect_done)
+        self.disconnectService.disconnect_conn_done.connect(self.handle_disconnect_conn_done)
+        self.disconnectService.disconnect_power_done.connect(self.handle_disconnect_power_done)
+        self.disconnectService.disconnect_trans_done.connect(self.handle_disconnect_trans_done)
+        self.disconnectService.disconnect_finished.connect(self.handle_graceful_disconnect_done)
 
         self.disconnect_running = False
 
@@ -59,7 +59,7 @@ class DeviceController:
     def start_system_check(self, connection_type: str):
         """
         1) Tells the state machine to connect the device (e.g. USB or Bluetooth).
-        2) Starts the system check thread to run the system check worker logic.
+        2) Starts the system check thread to run the system check Service logic.
         """
         self.state_machine.connect_device(connection_type)
 
@@ -82,7 +82,7 @@ class DeviceController:
     # Handlers for system check signals
     def handle_connect_checked(self):
         """
-        Worker signals that the device connection check step is done.
+        Service signals that the device connection check step is done.
         """
         self.state_machine.do_system_check_connection()
 
@@ -94,7 +94,7 @@ class DeviceController:
 
     def handle_system_check_done(self):
         """
-        Worker signals the entire system check is finished. 
+        Service signals the entire system check is finished. 
         Stop the thread and let the state machine proceed.
         """
         self.system_check_running = False
@@ -108,7 +108,7 @@ class DeviceController:
     def start_graceful_disconnect(self):
         """
         Tells the state machine to transition to the graceful disconnect state,
-        then starts the disconnect thread to run the gracefulDisconnectWorker logic.
+        then starts the disconnect thread to run the gracefulDisconnectService logic.
         """
         self.state_machine.do_graceful_disconnect()
 
@@ -133,7 +133,7 @@ class DeviceController:
     # Handlers for graceful disconnect signals
     def handle_disconnect_conn_done(self):
         """
-        Worker signals that the "Ending Connection" step is finished.
+        Service signals that the "Ending Connection" step is finished.
         Optionally, update the model or log progress.
         """
         self.state_machine.do_graceful_disconnect_conn()
@@ -146,7 +146,7 @@ class DeviceController:
 
     def handle_graceful_disconnect_done(self):
         """
-        Worker signals the entire graceful disconnect is finished.
+        Service signals the entire graceful disconnect is finished.
         Stop the thread, reset flags, and let the state machine finalize.
         """
         self.disconnect_running = False

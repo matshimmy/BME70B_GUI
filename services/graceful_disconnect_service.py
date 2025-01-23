@@ -1,7 +1,7 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 import time
 
-class GracefulDisconnectWorker(QObject):
+class GracefulDisconnectService(QObject):
     """
     Worker dedicated to running a graceful disconnect in a separate thread.
     """
