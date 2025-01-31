@@ -1,6 +1,7 @@
 # models/model.py
 
 from PyQt5.QtCore import QObject, pyqtSignal
+from models.signal_data import SignalData
 
 class Model(QObject):
     """
@@ -91,6 +92,8 @@ class Model(QObject):
         """
         Sets all fields to their default values for a disconnected, uninitialized state.
         """
+        self.signal_data = SignalData(sample_rate=100, num_channels=1)
+
         # Connection
         self.connection_type = None        # "USB" or "Bluetooth"
         self.is_connected = False

@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QThread
 from services.system_check_service import SystemCheckService
 from services.graceful_disconnect_service import GracefulDisconnectService
+from services.acquisition_service import AcquisitionService
 from controllers.state_machine import StateMachine
 
 class DeviceController:
@@ -52,6 +53,24 @@ class DeviceController:
         self.disconnectService.disconnect_finished.connect(self.handle_graceful_disconnect_done)
 
         self.disconnect_running = False
+
+        # ----------------------------------------------------------------
+        # Acquisition Thread & Service
+        # ----------------------------------------------------------------
+        self.acquisitionThread = QThread()
+        self.acquisitionService = AcquisitionService()
+
+        # Move the service to the acquisitionThread
+        self.acquisitionService.moveToThread(self.acquisitionThread)
+
+        # Connect the thread's started signal to run_acquisition
+        self.acquisitionThread.started.connect(self.acquisitionService.run_acquisition)
+
+        # Connect service signals
+        self.acquisitionService.chunk_received.connect(self.handle_data_chunk_received)
+        self.acquisitionService.finished.connect(self.handle_acquisition_done)
+
+        self.acquisition_running = False
 
     # --------------------------------------------------------------------------
     # SYSTEM CHECK TASK
@@ -154,6 +173,53 @@ class DeviceController:
         self.disconnectThread.wait()
         self.state_machine.do_graceful_disconnect_done()
 
+
+    # --------------------------------------------------------------------------
+    # ACQUISITION TASK
+    # --------------------------------------------------------------------------
+    def start_acquisition(self):
+        """
+        Called from the RunningAcquisitionWidget or state machine
+        to begin data acquisition.
+        """
+        # Possibly transition states
+        self.state_machine.start_acquisition()
+
+        if not self.acquisition_running:
+            self.acquisition_running = True
+            self.acquisitionThread.start()
+
+    def abort_acquisition(self):
+        """
+        Cancels an ongoing acquisition by requesting interruption,
+        quitting the thread, etc.
+        """
+        if self.acquisition_running:
+            self.acquisitionThread.requestInterruption()
+            # Optionally: self.state_machine.disconnect_device() or something else
+            self.acquisitionThread.quit()
+            self.acquisitionThread.wait()
+            self.acquisition_running = False
+
+    def handle_data_chunk_received(self, chunk):
+        """
+        A new chunk of mock data arrived. Store it in the model.
+        """
+        # for example, if you have model.signal_data
+        self.state_machine.model.signal_data.append_samples(chunk)
+        self.state_machine.model.model_changed.emit()
+
+    def handle_acquisition_done(self):
+        """
+        The entire mock acquisition finished (time limit reached).
+        Stop the thread and finalize the state if needed.
+        """
+        self.acquisition_running = False
+        self.acquisitionThread.quit()
+        self.acquisitionThread.wait()
+        # Possibly transition states or notify
+        # e.g., self.state_machine.acquisition_complete()
+
     # --------------------------------------------------------------------------
     # OTHER DEVICE TASKS (ACQUISITION, SIMULATION, STIMULATION)
     # --------------------------------------------------------------------------
@@ -162,9 +228,6 @@ class DeviceController:
         Immediate or forced disconnect (bypassing graceful).
         """
         self.state_machine.disconnect_device()
-
-    def start_acquisition(self):
-        self.state_machine.start_acquisition()
 
     def start_simulation(self):
         self.state_machine.start_simulation()
