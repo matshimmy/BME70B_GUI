@@ -29,9 +29,9 @@ class AcquisitionService(QObject):
         self._running = True
 
         sample_rate = 100.0   # e.g., 100 Hz
-        total_time = 30.0     # Acquire for 30 seconds
-        chunk_size = 1        # try 1 or 50 etc.
-        freq_hz = 0.2         # 1 Hz sine wave
+        total_time = 1000.0     # Acquire for 30 seconds
+        chunk_size = 20        # try 1 or 50 etc.
+        freq_hz = 0.5         # 1 Hz sine wave
 
         # Number of chunks total
         num_iterations = int(total_time * sample_rate / chunk_size)
@@ -51,7 +51,7 @@ class AcquisitionService(QObject):
             self.phase += (chunk_size / sample_rate)  # advance global phase
 
             # Generate sine wave (1 Hz) + small random noise
-            chunk = np.sin(2 * np.pi * freq_hz * t) + 0.1 * np.random.randn(chunk_size)
+            chunk = np.sin(2 * np.pi * freq_hz * t) + 0.05 * np.random.randn(chunk_size)
 
             # Emit this chunk
             self.chunk_received.emit(chunk)

@@ -65,11 +65,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.stacked_widget)
 
         # DEBUG: set state and model for running acquisition development
-        # self.state_machine.model.connection_type = "USB"
-        # self.state_machine.model.is_connected = True
-        # self.state_machine.model.power_level = 100
-        # self.state_machine.model.transmission_ok = True
-        # self.device_controller.start_acquisition()
+        self.state_machine.model.connection_type = "USB"
+        self.state_machine.model.is_connected = True
+        self.state_machine.model.power_level = 100
+        self.state_machine.model.transmission_ok = True
+        self.device_controller.start_acquisition()
 
 
     def on_state_changed(self, new_state):

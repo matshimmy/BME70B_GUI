@@ -24,7 +24,7 @@ class RunningAcquisitionWidget(QWidget):
         self.sample_rate = 100.0
         self.current_time = 0.0
 
-        device_controller.acquisitionService.chunk_received.connect(self.on_chunk_received)
+        self.device_controller.acquisitionService.chunk_received.connect(self.on_chunk_received)
 
         # ---------------------------
         # Main Layout
@@ -66,6 +66,7 @@ class RunningAcquisitionWidget(QWidget):
 
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setObjectName("redButton")
+        # TODO: Stop acquisition and disconnect gracefully
         self.disconnect_button.clicked.connect(self.device_controller.start_graceful_disconnect)
         bottom_layout.addWidget(self.disconnect_button)
 
