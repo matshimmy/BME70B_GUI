@@ -108,9 +108,6 @@ class SystemCheckWidget(QWidget):
         self.reset_spinners()
 
     def reset_spinners(self):
-        """
-        Re-initialize all spinners (e.g., after an abort or going back to idle).
-        """
         # 1) Connection spinner
         self.spin_anim_conn = qta.Spin(self.spinner_connection, autostart=True)
         self.spin_icon_conn = qta.icon(
@@ -139,15 +136,11 @@ class SystemCheckWidget(QWidget):
         self.top_label.setText("System Check in progress...")
 
     def update_ui(self):
-        """
-        Slot that updates the widget based on the model's current state.
-        Called automatically whenever the model emits model_changed.
-        """
         # ---------------------------
         # Connection
         # ---------------------------
         if self.model.is_connected:
-            self.label_connection.setText(f"Connection: {self.model.connection_type}")
+            self.label_connection.setText(f"Connection: {self.model.connection_type.value}")
             # Replace spinner with a check
             self.spinner_connection.setIcon(self.green_check_icon)
         else:

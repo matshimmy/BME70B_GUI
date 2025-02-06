@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
         self.system_check_screen = SystemCheckWidget(model=self.state_machine.model, device_controller=self.device_controller)
         self.mode_selection_screen = ModeSelectionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.acquisition_options_screen = AcquisitionOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
-        self.running_acquisition_screen = RunningAcquisitionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.running_acquisition_screen = RunningAcquisitionWidget(model=self.state_machine.model, state_machine=self.state_machine, device_controller=self.device_controller)
         self.simulation_options_screen = SimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.stimulation_options_screen = StimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
@@ -65,17 +65,16 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.stacked_widget)
 
         # DEBUG: set state and model for running acquisition development
-        self.state_machine.model.connection_type = "USB"
-        self.state_machine.model.is_connected = True
-        self.state_machine.model.power_level = 100
-        self.state_machine.model.transmission_ok = True
-        self.device_controller.start_acquisition()
+        # from enums.connection_type import ConnectionType
+        # self.state_machine.model.sampling_rate = 100
+        # self.state_machine.model.connection_type = ConnectionType.USB
+        # self.state_machine.model.is_connected = True
+        # self.state_machine.model.power_level = 100
+        # self.state_machine.model.transmission_ok = True
+        # self.device_controller.start_acquisition()
 
 
     def on_state_changed(self, new_state):
-        """
-        Called when the state machine changes state.
-        """
         self.setWindowTitle(windowTitlePrefix + new_state.value)
         if new_state == AppState.IDLE:
             self.stacked_widget.setCurrentIndex(0)

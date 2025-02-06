@@ -94,3 +94,22 @@ QPushButton#backButton:hover {
 QPushButton#backButton:pressed {
     color: #0056b3; /* Darker color when pressed */
 }
+
+/* Gray Button (Disabled / Unpressable) */
+QPushButton#grayButton {
+    background-color: #b0b0b0;
+    color: #808080;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    border: 2px solid #a0a0a0;
+}
+
+QPushButton#grayButton:hover {
+    background-color: #b0b0b0; /* No change on hover */
+}
+
+QPushButton#grayButton:pressed {
+    background-color: #b0b0b0; /* No change on press */
+}

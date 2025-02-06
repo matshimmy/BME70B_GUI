@@ -8,137 +8,204 @@ import numpy as np
 
 from controllers.device_controller import DeviceController
 from controllers.state_machine import StateMachine
+from models.model import Model
 
 class RunningAcquisitionWidget(QWidget):
-    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
+    def __init__(self, model: Model, state_machine: StateMachine, device_controller: DeviceController):
         super().__init__()
         self.device_controller = device_controller
         self.state_machine = state_machine
-        self.acquisition_paused = False
+        self.model = model
         
-        # ---------------------------
-        # Data Arrays for Plotting
-        # ---------------------------
-        self.x_data = np.array([]) 
-        self.y_data = np.array([])
-        self.sample_rate = 100.0
-        self.current_time = 0.0
+        self._build_ui()
+        self._connect_signals()
+        self.reset_ui()  # Set dynamic state to initial values
 
-        self.device_controller.acquisitionService.chunk_received.connect(self.on_chunk_received)
-
-        # ---------------------------
-        # Main Layout
-        # ---------------------------
+    def _build_ui(self):
+        # Main layout
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
 
-        # Spacer at the top
-        main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        # ---------------------------
+        # Back Button at the Top-Left
+        # ---------------------------
+        back_button_layout = QHBoxLayout()
+        self.back_button = QPushButton(" ← ")
+        self.back_button.setObjectName("backButton")
+        self.back_button.clicked.connect(self.back)
+        self.back_button.setEnabled(False)
+
+        # Add an expanding spacer to push the button to the left
+        back_button_layout.addWidget(self.back_button)
+        back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         # Title label
         self.label = QLabel("Acquisition In Progress...")
-        self.label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(self.label)
+        back_button_layout.addWidget(self.label)
+        back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        
+        # Add the back button layout to the main layout
+        main_layout.addLayout(back_button_layout)
 
-        # ---------------------------
+        # Spacer at the top
+        main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        
         # PyQtGraph Plot
-        # ---------------------------
         self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setBackground('w')  # white background
-        self.plot_widget.setLabel('left', 'Amplitude', units='mA')
+        self.plot_widget.setBackground('w')  # White background
+        self.plot_widget.setLabel('left', 'Amplitude', units='A')
         self.plot_widget.setLabel('bottom', 'Time', units='s')
         self.curve = self.plot_widget.plot([], [], pen='b')
         main_layout.addWidget(self.plot_widget)
-
-        # Acquisition control (pause/resume)
+        
+        # Acquisition control (pause/resume) button
         self.acquisition_button = QPushButton("Pause Acquisition")
         self.acquisition_button.setObjectName("amberButton")
         self.acquisition_button.clicked.connect(self.toggle_acquisition)
         main_layout.addWidget(self.acquisition_button)
-
-        # Spacer below the buttons
+        
+        # Spacer below the button
         main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
-
-        # ---------------------------
-        # Bottom Layout
-        # ---------------------------
+        
+        # Bottom layout for Disconnect and Save Data buttons
         bottom_layout = QHBoxLayout()
-
+        
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setObjectName("redButton")
-        # TODO: Stop acquisition and disconnect gracefully
-        self.disconnect_button.clicked.connect(self.device_controller.start_graceful_disconnect)
+        self.disconnect_button.clicked.connect(self.disconnect)
         bottom_layout.addWidget(self.disconnect_button)
-
-        # Spacer to push the Save button to the right
+        
+        # Spacer to push the Save Data button to the right
         bottom_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
+        
         self.save_data_button = QPushButton("Save Data")
         self.save_data_button.setObjectName("amberButton")
         self.save_data_button.clicked.connect(self.save_data)
         bottom_layout.addWidget(self.save_data_button)
-
+        
         main_layout.addLayout(bottom_layout)
         self.setLayout(main_layout)
+        
+    def _connect_signals(self):
+        self.state_machine.acquisition_chunk_received.connect(self.update_graph)
+        self.device_controller.acquisitionThread.finished.connect(self._disconnect_acquisition_stopped)
+        
+    def reset_ui(self):
+        self.disconnecting = False
 
-    # ---------------------------
-    # Save Data
-    # ---------------------------
+        # Reset internal plotting data
+        self.x_data = np.array([])
+        self.y_data = np.array([])
+        self.current_time = 0.0
+        
+        # Reset the plot
+        self.curve.setData([], [])
+        self.plot_widget.setXRange(0, 5)
+        
+        # Reset the label
+        self.label.setText("Acquisition In Progress...")
+        
+        # Reset acquisition button to active state
+        self.acquisition_button.setEnabled(True)
+        self.acquisition_button.setText("Pause Acquisition")
+        self.acquisition_button.setObjectName("amberButton")
+        self._update_button_style(self.acquisition_button)
+        
+        # Reset disconnect button
+        self.disconnect_button.setEnabled(True)
+        self.disconnect_button.setText("Disconnect")
+        
+        # Reset save data button
+        self.save_data_button.setEnabled(True)
+        self.save_data_button.setObjectName("amberButton")
+        self._update_button_style(self.save_data_button)
+        
+    def _update_button_style(self, button: QPushButton):
+        button.style().unpolish(button)
+        button.style().polish(button)
+        button.update()
+        
     def save_data(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Save Data", "", "*.csv")
         if filename:
             self.state_machine.model.signal_data.export_csv(filename)
-
-    # ---------------------------
-    # Pause / Resume Acquisition
-    # ---------------------------
+    
     def toggle_acquisition(self):
-        if self.acquisition_paused:
+        self.state_machine.toggle_acquisition()
+        if self.model.acquisition_running:
             self.acquisition_button.setText("Pause Acquisition")
             self.label.setText("Acquisition In Progress...")
             self.acquisition_button.setObjectName("amberButton")
-            # If you want to resume data from the service, call e.g. device_controller.resume_acquisition()
+            self.back_button.setEnabled(False)
         else:
             self.acquisition_button.setText("Resume Acquisition")
             self.label.setText("Acquisition Paused")
             self.acquisition_button.setObjectName("greenButton")
-            # If you want to pause data from the service, call e.g. device_controller.pause_acquisition()
-
-        self.acquisition_button.style().unpolish(self.acquisition_button)
-        self.acquisition_button.style().polish(self.acquisition_button)
-        self.acquisition_button.update()
-
-        self.acquisition_paused = not self.acquisition_paused
-
-    # ---------------------------
-    # Plot Update Slot
-    # ---------------------------
-    def on_chunk_received(self, chunk):
-        """
-        Called whenever a new data chunk arrives from the device/controller.
-        'chunk' could be a NumPy array or list of samples.
-        We'll append to our x_data / y_data and re-plot.
-        """
-        if self.acquisition_paused:
-            return  # Ignore new data if paused
-
-        chunk_len = len(chunk)
-        # Create a time array for this chunk, starting at self.current_time
-        t = np.linspace(self.current_time,
-                        self.current_time + (chunk_len/self.sample_rate),
-                        chunk_len, endpoint=False)
-        self.current_time += (chunk_len/self.sample_rate)
-
-        # Append to existing data
-        self.x_data = np.concatenate([self.x_data, t])
-        self.y_data = np.concatenate([self.y_data, chunk])
-
-        # Update the plot
-        self.curve.setData(self.x_data, self.y_data)
-
-        if self.current_time < 5:
-            # Before we reach 5s of data, just show the range [0, 5]
+            self.back_button.setEnabled(True)
+        self._update_button_style(self.acquisition_button)
+    
+    def update_graph(self):
+        # Get the full data array
+        data = self.state_machine.model.signal_data.data
+        sample_rate = self.state_machine.model.signal_data.sample_rate
+        total_points = len(data)
+        
+        # Calculate how many points correspond to the last 5 seconds
+        visible_points = int(5 * sample_rate)
+        
+        # Slice the data to get only the visible portion
+        if total_points > visible_points:
+            data_visible = data[-visible_points:]
+            # Create a corresponding time axis for the visible data
+            t_visible = np.linspace(
+                (total_points - visible_points) / sample_rate,
+                total_points / sample_rate,
+                visible_points,
+                endpoint=False
+            )
+        else:
+            data_visible = data
+            t_visible = np.linspace(0, total_points / sample_rate, total_points, endpoint=False)
+        
+        # Update the plot with only the visible data
+        self.curve.setData(t_visible, data_visible)
+        
+        # Update the x-axis range
+        current_time = total_points / sample_rate
+        if current_time < 5:
             self.plot_widget.setXRange(0, 5)
         else:
-            # Once we have more than 5s of data, scroll the window
-            self.plot_widget.setXRange(self.current_time - 5, self.current_time)
+            self.plot_widget.setXRange(current_time - 5, current_time)
+    
+    def disconnect(self):
+        self.disconnecting = True
+        # Change acquisition button to show disabled state
+        self.acquisition_button.setObjectName("greyButton")
+        self._update_button_style(self.acquisition_button)
+        self.acquisition_button.setEnabled(False)
+        
+        # Update label to indicate disconnecting
+        self.label.setText("Stopping Acquisition...")
+        
+        # Update disconnect button
+        self.disconnect_button.setEnabled(False)
+        self.disconnect_button.setText("Disconnecting...")
+        
+        # Update save data button
+        self.save_data_button.setEnabled(False)
+        self.save_data_button.setObjectName("greyButton")
+        self._update_button_style(self.save_data_button)
+        self.back_button.setEnabled(False)
+        
+        # Stop the acquisition and initiate graceful disconnect
+        self.device_controller.stop_acquisition()
+
+    def _disconnect_acquisition_stopped(self):
+        if self.disconnecting:
+            self.device_controller.start_graceful_disconnect()
+            self.reset_ui()
+
+    def back(self):
+        self.device_controller.stop_acquisition()
+        self.state_machine.transition_to_acquisition_options()
+        self.reset_ui()

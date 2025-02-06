@@ -71,8 +71,8 @@ class AcquisitionOptionsWidget(QWidget):
         self.sampling_label.setAlignment(Qt.AlignCenter)
 
         self.combo_sampling = QComboBox()
-        self.combo_sampling.addItems(["30 Hz", "100 Hz", "200 Hz", "500 Hz"])
-        self.combo_sampling.setCurrentIndex(1)  # default "100 Hz"
+        self.combo_sampling.addItems(["5 Hz", "30 Hz", "100 Hz", "200 Hz", "500 Hz"])
+        self.combo_sampling.setCurrentIndex(1)
 
         sampling_layout = QHBoxLayout()
         sampling_layout.setAlignment(Qt.AlignCenter)
@@ -105,11 +105,6 @@ class AcquisitionOptionsWidget(QWidget):
         self.setLayout(main_layout)
 
     def on_start_acquisition(self):
-        """
-        Called when the user clicks "Start."
-        Gather the selected acquisition type (template/full) and sampling rate,
-        and then pass them to the device controller or state machine as needed.
-        """
         selected_radio_id = self.radio_group.checkedId()
         if selected_radio_id == 0:
             acquisition_type = AcquisitionType.TEMPLATE
@@ -117,8 +112,8 @@ class AcquisitionOptionsWidget(QWidget):
             acquisition_type = AcquisitionType.FULL_SIGNAL
 
         sampling_rate_str = self.combo_sampling.currentText()
-        # Convert "30 Hz" to integer or store the string
-        sampling_rate = int(sampling_rate_str.split()[0])
+
+        sampling_rate = float(sampling_rate_str.split()[0])
 
         # Update state machine
         self.state_machine.update_acquisition_options(acquisition_type, sampling_rate)

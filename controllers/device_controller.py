@@ -4,13 +4,9 @@ from services.graceful_disconnect_service import GracefulDisconnectService
 from services.acquisition_service import AcquisitionService
 from controllers.state_machine import StateMachine
 
+from enums.connection_type import ConnectionType
+
 class DeviceController:
-    """
-    The DeviceController manages two separate Services and threads:
-      1) systemCheckThread / SystemCheckService, for system checks
-      2) disconnectThread / GracefulDisconnectService, for graceful disconnect
-    Each thread is started/stopped independently.
-    """
     def __init__(self, state_machine: StateMachine):
         self.state_machine = state_machine
 
@@ -58,7 +54,7 @@ class DeviceController:
         # Acquisition Thread & Service
         # ----------------------------------------------------------------
         self.acquisitionThread = QThread()
-        self.acquisitionService = AcquisitionService()
+        self.acquisitionService = AcquisitionService(self.state_machine.model)
 
         # Move the service to the acquisitionThread
         self.acquisitionService.moveToThread(self.acquisitionThread)
@@ -68,18 +64,13 @@ class DeviceController:
 
         # Connect service signals
         self.acquisitionService.chunk_received.connect(self.handle_data_chunk_received)
-        self.acquisitionService.finished.connect(self.handle_acquisition_done)
 
         self.acquisition_running = False
 
     # --------------------------------------------------------------------------
     # SYSTEM CHECK TASK
     # --------------------------------------------------------------------------
-    def start_system_check(self, connection_type: str):
-        """
-        1) Tells the state machine to connect the device (e.g. USB or Bluetooth).
-        2) Starts the system check thread to run the system check Service logic.
-        """
+    def start_system_check(self, connection_type : ConnectionType):
         self.state_machine.connect_device(connection_type)
 
         if not self.system_check_running:
@@ -87,10 +78,6 @@ class DeviceController:
             self.systemCheckThread.start()
 
     def abort_system_check(self):
-        """
-        Cancels an ongoing system check by requesting interruption,
-        quitting the thread, and telling the state machine to disconnect.
-        """
         if self.system_check_running:
             self.systemCheckThread.requestInterruption()
             self.state_machine.disconnect_device()
@@ -100,9 +87,6 @@ class DeviceController:
 
     # Handlers for system check signals
     def handle_connect_checked(self):
-        """
-        Service signals that the device connection check step is done.
-        """
         self.state_machine.do_system_check_connection()
 
     def handle_power_checked(self):
@@ -112,10 +96,6 @@ class DeviceController:
         self.state_machine.do_system_test_transmission()
 
     def handle_system_check_done(self):
-        """
-        Service signals the entire system check is finished. 
-        Stop the thread and let the state machine proceed.
-        """
         self.system_check_running = False
         self.systemCheckThread.quit()
         self.systemCheckThread.wait()
@@ -125,10 +105,6 @@ class DeviceController:
     # GRACEFUL DISCONNECT TASK
     # --------------------------------------------------------------------------
     def start_graceful_disconnect(self):
-        """
-        Tells the state machine to transition to the graceful disconnect state,
-        then starts the disconnect thread to run the gracefulDisconnectService logic.
-        """
         self.state_machine.do_graceful_disconnect()
 
         if not self.disconnect_running:
@@ -136,25 +112,14 @@ class DeviceController:
             self.disconnectThread.start()
 
     def force_disconnect(self):
-        """
-        Cancels an ongoing graceful disconnect by requesting interruption 
-        and stopping the thread.
-        NOTE: Depending on your desired logic, you might still want to forcibly 
-        finalize or skip steps.
-        """
         if self.disconnect_running:
-            self.disconnectThread.requestInterruption()
             self.state_machine.disconnect_device()
+            self.disconnectThread.requestInterruption()
             self.disconnectThread.quit()
-            self.disconnectThread.wait()
             self.disconnect_running = False
 
     # Handlers for graceful disconnect signals
     def handle_disconnect_conn_done(self):
-        """
-        Service signals that the "Ending Connection" step is finished.
-        Optionally, update the model or log progress.
-        """
         self.state_machine.do_graceful_disconnect_conn()
 
     def handle_disconnect_power_done(self):
@@ -164,69 +129,34 @@ class DeviceController:
         self.state_machine.do_graceful_disconnect_trans()
 
     def handle_graceful_disconnect_done(self):
-        """
-        Service signals the entire graceful disconnect is finished.
-        Stop the thread, reset flags, and let the state machine finalize.
-        """
         self.disconnect_running = False
         self.disconnectThread.quit()
         self.disconnectThread.wait()
         self.state_machine.do_graceful_disconnect_done()
 
-
     # --------------------------------------------------------------------------
     # ACQUISITION TASK
     # --------------------------------------------------------------------------
     def start_acquisition(self):
-        """
-        Called from the RunningAcquisitionWidget or state machine
-        to begin data acquisition.
-        """
-        # Possibly transition states
-        self.state_machine.start_acquisition()
-
         if not self.acquisition_running:
+            self.state_machine.start_acquisition()
             self.acquisition_running = True
             self.acquisitionThread.start()
 
-    def abort_acquisition(self):
-        """
-        Cancels an ongoing acquisition by requesting interruption,
-        quitting the thread, etc.
-        """
+    def stop_acquisition(self):
         if self.acquisition_running:
+            self.state_machine.stop_acquisition()
             self.acquisitionThread.requestInterruption()
-            # Optionally: self.state_machine.disconnect_device() or something else
             self.acquisitionThread.quit()
-            self.acquisitionThread.wait()
             self.acquisition_running = False
 
     def handle_data_chunk_received(self, chunk):
-        """
-        A new chunk of mock data arrived. Store it in the model.
-        """
-        # for example, if you have model.signal_data
-        self.state_machine.model.signal_data.append_samples(chunk)
-        self.state_machine.model.model_changed.emit()
-
-    def handle_acquisition_done(self):
-        """
-        The entire mock acquisition finished (time limit reached).
-        Stop the thread and finalize the state if needed.
-        """
-        self.acquisition_running = False
-        self.acquisitionThread.quit()
-        self.acquisitionThread.wait()
-        # Possibly transition states or notify
-        # e.g., self.state_machine.acquisition_complete()
+        self.state_machine.append_acquisition_data(chunk)
 
     # --------------------------------------------------------------------------
     # OTHER DEVICE TASKS (ACQUISITION, SIMULATION, STIMULATION)
     # --------------------------------------------------------------------------
     def disconnect_device(self):
-        """
-        Immediate or forced disconnect (bypassing graceful).
-        """
         self.state_machine.disconnect_device()
 
     def start_simulation(self):

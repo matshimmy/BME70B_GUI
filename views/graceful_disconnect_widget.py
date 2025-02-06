@@ -1,5 +1,3 @@
-# graceful_disconnect_widget.py
-
 import qtawesome as qta
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QSpacerItem, QSizePolicy
@@ -10,11 +8,6 @@ from models.model import Model
 from controllers.device_controller import DeviceController
 
 class GracefulDisconnectWidget(QWidget):
-    """
-    Shows spinners for each step of the disconnect process (connection, power, transmission).
-    Displays check marks when each step is complete, based on the Model fields
-    updated by the Worker in a separate thread.
-    """
     def __init__(self, model: Model, device_controller: DeviceController):
         super().__init__()
         self.device_controller = device_controller
@@ -111,10 +104,6 @@ class GracefulDisconnectWidget(QWidget):
         self.reset_spinners()
 
     def reset_spinners(self):
-        """
-        Reset all spinners, so if the user restarts a graceful disconnect,
-        we show the spinning icons again instead of check marks.
-        """
         # Connection
         self.spin_anim_conn = qta.Spin(self.spinner_connection, autostart=True)
         self.spin_icon_conn = qta.icon(
@@ -143,11 +132,6 @@ class GracefulDisconnectWidget(QWidget):
         self.top_label.setText("Graceful Disconnect in progress...")
 
     def update_ui(self):
-        """
-        Called whenever the model emits model_changed.
-        We check our 'disconnect_xxx_done' fields to see which steps are complete
-        and replace the spinners with check marks as needed.
-        """
         # If the Worker updates these fields in the Model, we can do:
         if self.model.disconnect_conn_done:
             # Step 1 done -> show check mark

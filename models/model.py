@@ -1,16 +1,8 @@
-# models/model.py
-
 from PyQt5.QtCore import QObject, pyqtSignal
 from models.signal_data import SignalData
+from enums.connection_type import ConnectionType
 
 class Model(QObject):
-    """
-    The Model holds data about the device status (e.g. connection, power, transmission),
-    as well as options/settings for acquisition, simulation, and stimulation.
-    
-    It emits a `model_changed` signal whenever data changes,
-    allowing any connected views or controllers to update accordingly.
-    """
     model_changed = pyqtSignal()
 
     def __init__(self):
@@ -20,21 +12,12 @@ class Model(QObject):
     # --------------------------------------------------------------------------
     # PUBLIC METHODS - Connection & Disconnection
     # --------------------------------------------------------------------------
-    def connect(self, conn_type: str):
-        """
-        Sets the connection type (USB/Bluetooth).
-        Clears some flags for transmission/power.
-        Then emits model_changed.
-        """
+    def connect(self, conn_type: ConnectionType):
         self.connection_type = conn_type
         self.transmission_ok = False
         self.model_changed.emit()
 
     def disconnect(self):
-        """
-        Resets the model to default (fully disconnected, no data).
-        Then emits model_changed.
-        """
         self.reset_model()
         self.model_changed.emit()
 
@@ -42,25 +25,14 @@ class Model(QObject):
     # PUBLIC METHODS - System Check Steps
     # --------------------------------------------------------------------------
     def check_connection(self):
-        """
-        Dummy logic to confirm connection is active.
-        In a real scenario, you'd query hardware or test pings.
-        """
         self.is_connected = True
         self.model_changed.emit()
 
     def check_power(self):
-        """
-        Dummy logic to confirm power is okay. 
-        For now, set it to 100.
-        """
         self.power_level = 100
         self.model_changed.emit()
 
     def test_transmission(self):
-        """
-        Dummy logic to confirm transmissions are working.
-        """
         self.transmission_ok = True
         self.model_changed.emit()
 
@@ -68,34 +40,30 @@ class Model(QObject):
     # PUBLIC METHODS - Graceful Disconnect Steps
     # --------------------------------------------------------------------------
     def set_disconnect_conn_done(self):
-        """
-        Worker calls this once the 'Ending Connection' step is done.
-        """
         self.disconnect_conn_done = True
         self.model_changed.emit()
 
     def set_disconnect_power_done(self):
-        """
-        Worker calls this once the 'Shutting Off Power' step is done.
-        """
         self.disconnect_power_done = True
         self.model_changed.emit()
 
     def set_disconnect_trans_done(self):
-        """
-        Worker calls this once the 'Ending Transmission' step is done.
-        """
         self.disconnect_trans_done = True
         self.model_changed.emit()
 
+    # --------------------------------------------------------------------------
+    # PUBLIC METHODS - Acquisition
+    # --------------------------------------------------------------------------
+    def start_acquisition(self):
+        self.signal_data = SignalData(sample_rate=self.sampling_rate)
+        self.acquisition_running = True
+        self.model_changed.emit()
+
     def reset_model(self):
-        """
-        Sets all fields to their default values for a disconnected, uninitialized state.
-        """
-        self.signal_data = SignalData(sample_rate=100, num_channels=1)
+        self.signal_data = SignalData(sample_rate=100)
 
         # Connection
-        self.connection_type = None        # "USB" or "Bluetooth"
+        self.connection_type = None
         self.is_connected = False
         self.power_level = -1
         self.transmission_ok = False
@@ -108,6 +76,7 @@ class Model(QObject):
         # Acquisition
         self.acquisition_type = None
         self.sampling_rate = None
+        self.acquisition_running = False
 
         # Simulation
         self.simulation_type = None
