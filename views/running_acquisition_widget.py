@@ -33,7 +33,6 @@ class RunningAcquisitionWidget(QWidget):
         self.back_button = QPushButton(" ← ")
         self.back_button.setObjectName("backButton")
         self.back_button.clicked.connect(self.back)
-        self.back_button.setEnabled(False)
 
         # Add an expanding spacer to push the button to the left
         back_button_layout.addWidget(self.back_button)
@@ -92,6 +91,7 @@ class RunningAcquisitionWidget(QWidget):
         
     def reset_ui(self):
         self.disconnecting = False
+        self.back_button.setEnabled(False)
 
         # Reset internal plotting data
         self.x_data = np.array([])
