@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
-    QSizePolicy, QLabel, QFileDialog
+    QSizePolicy, QLabel, QFileDialog, QSpinBox
 )
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
@@ -26,49 +26,52 @@ class RunningAcquisitionWidget(QWidget):
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
 
-        # ---------------------------
-        # Back Button at the Top-Left
-        # ---------------------------
+        # Top row: Back button and label
         back_button_layout = QHBoxLayout()
         self.back_button = QPushButton(" ← ")
         self.back_button.setObjectName("backButton")
         self.back_button.clicked.connect(self.back)
+        back_button_layout.addWidget(self.back_button)
 
         # Add an expanding spacer to push the button to the left
-        back_button_layout.addWidget(self.back_button)
         back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         # Title label
         self.label = QLabel("Acquisition In Progress...")
         back_button_layout.addWidget(self.label)
+        # Another expanding spacer so label is centered
         back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        
-        # Add the back button layout to the main layout
         main_layout.addLayout(back_button_layout)
-
-        # Spacer at the top
-        main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
         
         # PyQtGraph Plot
         self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setBackground('w')  # White background
+        self.plot_widget.setBackground('w')
         self.plot_widget.setLabel('left', 'Amplitude', units='A')
         self.plot_widget.setLabel('bottom', 'Time', units='s')
         self.curve = self.plot_widget.plot([], [], pen='b')
-        main_layout.addWidget(self.plot_widget)
-        
+        main_layout.addWidget(self.plot_widget, stretch=1)
+
+        # Time window spinbox row
+        x_range_layout = QHBoxLayout()
+        self.x_range_label = QLabel("Time window (s):")
+        x_range_layout.addWidget(self.x_range_label)
+
+        self.x_range_spinbox = QSpinBox()
+        self.x_range_spinbox.setRange(5, 60)
+        self.x_range_spinbox.valueChanged.connect(self.update_graph)
+        x_range_layout.addWidget(self.x_range_spinbox)
+
+        x_range_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        main_layout.addLayout(x_range_layout)
+
         # Acquisition control (pause/resume) button
         self.acquisition_button = QPushButton("Pause Acquisition")
         self.acquisition_button.setObjectName("amberButton")
         self.acquisition_button.clicked.connect(self.toggle_acquisition)
         main_layout.addWidget(self.acquisition_button)
         
-        # Spacer below the button
-        main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
-        
         # Bottom layout for Disconnect and Save Data buttons
         bottom_layout = QHBoxLayout()
-        
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setObjectName("redButton")
         self.disconnect_button.clicked.connect(self.disconnect)
@@ -91,31 +94,23 @@ class RunningAcquisitionWidget(QWidget):
         
     def reset_ui(self):
         self.disconnecting = False
+        self.x_range_window = 5
+        self.x_range_spinbox.setValue(self.x_range_window)
         self.back_button.setEnabled(False)
 
-        # Reset internal plotting data
-        self.x_data = np.array([])
-        self.y_data = np.array([])
-        self.current_time = 0.0
-        
-        # Reset the plot
         self.curve.setData([], [])
-        self.plot_widget.setXRange(0, 5)
-        
-        # Reset the label
+        self.plot_widget.setXRange(0, self.x_range_window)
+
         self.label.setText("Acquisition In Progress...")
-        
-        # Reset acquisition button to active state
+
         self.acquisition_button.setEnabled(True)
         self.acquisition_button.setText("Pause Acquisition")
         self.acquisition_button.setObjectName("amberButton")
         self._update_button_style(self.acquisition_button)
-        
-        # Reset disconnect button
+
         self.disconnect_button.setEnabled(True)
         self.disconnect_button.setText("Disconnect")
-        
-        # Reset save data button
+
         self.save_data_button.setEnabled(True)
         self.save_data_button.setObjectName("amberButton")
         self._update_button_style(self.save_data_button)
@@ -145,18 +140,15 @@ class RunningAcquisitionWidget(QWidget):
         self._update_button_style(self.acquisition_button)
     
     def update_graph(self):
-        # Get the full data array
         data = self.state_machine.model.signal_data.data
         sample_rate = self.state_machine.model.signal_data.sample_rate
         total_points = len(data)
-        
-        # Calculate how many points correspond to the last 5 seconds
-        visible_points = int(5 * sample_rate)
-        
-        # Slice the data to get only the visible portion
+
+        time_window = self.x_range_spinbox.value()
+        visible_points = int(time_window * sample_rate)
+
         if total_points > visible_points:
             data_visible = data[-visible_points:]
-            # Create a corresponding time axis for the visible data
             t_visible = np.linspace(
                 (total_points - visible_points) / sample_rate,
                 total_points / sample_rate,
@@ -166,38 +158,29 @@ class RunningAcquisitionWidget(QWidget):
         else:
             data_visible = data
             t_visible = np.linspace(0, total_points / sample_rate, total_points, endpoint=False)
-        
-        # Update the plot with only the visible data
+
         self.curve.setData(t_visible, data_visible)
-        
-        # Update the x-axis range
         current_time = total_points / sample_rate
-        if current_time < 5:
-            self.plot_widget.setXRange(0, 5)
+        if current_time < time_window:
+            self.plot_widget.setXRange(0, time_window)
         else:
-            self.plot_widget.setXRange(current_time - 5, current_time)
+            self.plot_widget.setXRange(current_time - time_window, current_time)
     
     def disconnect(self):
         self.disconnecting = True
-        # Change acquisition button to show disabled state
         self.acquisition_button.setObjectName("greyButton")
         self._update_button_style(self.acquisition_button)
         self.acquisition_button.setEnabled(False)
-        
-        # Update label to indicate disconnecting
         self.label.setText("Stopping Acquisition...")
-        
-        # Update disconnect button
+
         self.disconnect_button.setEnabled(False)
         self.disconnect_button.setText("Disconnecting...")
-        
-        # Update save data button
+
         self.save_data_button.setEnabled(False)
         self.save_data_button.setObjectName("greyButton")
         self._update_button_style(self.save_data_button)
         self.back_button.setEnabled(False)
-        
-        # Stop the acquisition and initiate graceful disconnect
+
         self.device_controller.stop_acquisition()
 
     def _disconnect_acquisition_stopped(self):
