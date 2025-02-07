@@ -73,7 +73,7 @@ class StateMachine(QObject):
     def append_acquisition_data(self, chunk):
         if not self.model.acquisition_running:
             return
-        self.model.signal_data.append_chunck(chunk)
+        self.model.signal_data.append_chunk(chunk)
         self.model.model_changed.emit()
         self.acquisition_chunk_received.emit()
 

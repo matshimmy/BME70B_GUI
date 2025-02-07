@@ -1,5 +1,6 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from models.signal_data import SignalData
+from models.template_processor import TemplateProcessor
 from enums.connection_type import ConnectionType
 
 class Model(QObject):
@@ -56,6 +57,16 @@ class Model(QObject):
     # --------------------------------------------------------------------------
     def start_acquisition(self):
         self.signal_data = SignalData(sample_rate=self.sampling_rate)
+        # Create TemplateProcessor
+        self.template_processor = TemplateProcessor(
+            sample_rate=self.sampling_rate,
+            init_wait_time_s=10,
+            update_interval_s=1.0
+        )
+        # Connect the signal from SignalData to the processor's slot
+        self.signal_data.new_chunk_appended.connect(
+            self.template_processor.append_data
+        )
         self.acquisition_running = True
         self.model_changed.emit()
 

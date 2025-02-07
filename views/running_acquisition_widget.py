@@ -25,24 +25,43 @@ class RunningAcquisitionWidget(QWidget):
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
 
-        # Top row: Back button + label
-        back_button_layout = QHBoxLayout()
+        # -- Top row: Back button + "Template" label --
+        top_row_layout = QHBoxLayout()
+
         self.back_button = QPushButton(" ← ")
         self.back_button.setObjectName("backButton")
         self.back_button.clicked.connect(self.back)
-        back_button_layout.addWidget(self.back_button)
+        top_row_layout.addWidget(self.back_button)
 
-        # Spacer to push the label to the center
-        back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        # Spacer to push the label to center
+        top_row_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        self.label = QLabel("Acquisition In Progress...")
-        back_button_layout.addWidget(self.label)
+        self.template_label = QLabel("Template")
+        top_row_layout.addWidget(self.template_label)
 
         # Another expanding spacer so label is centered
-        back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        main_layout.addLayout(back_button_layout)
-        
-        # Plot Widget
+        top_row_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        main_layout.addLayout(top_row_layout)
+
+        # -- Template Plot Widget (above the main acquisition plot) --
+        self.template_plot_widget = pg.PlotWidget()
+        self.template_plot_widget.setBackground('w')
+        self.template_plot_widget.setLabel('left', 'Amplitude', units='A')
+        self.template_plot_widget.setLabel('bottom', 'Time', units='s')
+
+        # Create a simple line of zeros as an initial placeholder
+        x_vals = np.linspace(0, 1, 100)
+        y_vals = np.zeros(100)
+        self.template_curve = self.template_plot_widget.plot(x_vals, y_vals, pen='r')
+
+        main_layout.addWidget(self.template_plot_widget, stretch=1)
+
+        # -- Acquisition Status Label: "Acquisition In Progress..." --
+        self.acquisition_status_label = QLabel("Acquisition In Progress...")
+        main_layout.addWidget(self.acquisition_status_label)
+
+        # -- Main Data Plot Widget --
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.setBackground('w')
         self.plot_widget.setLabel('left', 'Amplitude', units='A')
@@ -50,7 +69,7 @@ class RunningAcquisitionWidget(QWidget):
         self.curve = self.plot_widget.plot([], [], pen='b')
         main_layout.addWidget(self.plot_widget, stretch=1)
 
-        # Time window spinbox row (for the X-axis duration)
+        # -- Time window spinbox row (for the X-axis duration) --
         x_range_layout = QHBoxLayout()
         self.x_range_label = QLabel("Time window (s):")
         x_range_layout.addWidget(self.x_range_label)
@@ -68,13 +87,13 @@ class RunningAcquisitionWidget(QWidget):
 
         main_layout.addLayout(x_range_layout)
 
-        # Acquisition (pause/resume) button
+        # -- Acquisition (pause/resume) button --
         self.acquisition_button = QPushButton("Pause Acquisition")
         self.acquisition_button.setObjectName("amberButton")
         self.acquisition_button.clicked.connect(self.toggle_acquisition)
         main_layout.addWidget(self.acquisition_button)
         
-        # Bottom layout for Disconnect and Save Data
+        # -- Bottom layout for Disconnect and Save Data --
         bottom_layout = QHBoxLayout()
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setObjectName("redButton")
@@ -108,7 +127,8 @@ class RunningAcquisitionWidget(QWidget):
         self.curve.setData([], [])
         self.plot_widget.setXRange(0, 5)
 
-        self.label.setText("Acquisition In Progress...")
+        # Reset acquisition status label
+        self.acquisition_status_label.setText("Acquisition In Progress...")
 
         self.acquisition_button.setEnabled(True)
         self.acquisition_button.setText("Pause Acquisition")
@@ -121,6 +141,11 @@ class RunningAcquisitionWidget(QWidget):
         self.save_data_button.setEnabled(True)
         self.save_data_button.setObjectName("amberButton")
         self._update_button_style(self.save_data_button)
+
+        # Reset template plot to a line of zeros
+        x_vals = np.linspace(0, 1, 100)
+        y_vals = np.zeros(100)
+        self.template_curve.setData(x_vals, y_vals)
 
     def _update_button_style(self, button: QPushButton):
         button.style().unpolish(button)
@@ -136,12 +161,12 @@ class RunningAcquisitionWidget(QWidget):
         self.state_machine.toggle_acquisition()
         if self.model.acquisition_running:
             self.acquisition_button.setText("Pause Acquisition")
-            self.label.setText("Acquisition In Progress...")
+            self.acquisition_status_label.setText("Acquisition In Progress...")
             self.acquisition_button.setObjectName("amberButton")
             self.back_button.setEnabled(False)
         else:
             self.acquisition_button.setText("Resume Acquisition")
-            self.label.setText("Acquisition Paused")
+            self.acquisition_status_label.setText("Acquisition Paused")
             self.acquisition_button.setObjectName("greenButton")
             self.back_button.setEnabled(True)
         self._update_button_style(self.acquisition_button)
@@ -168,6 +193,7 @@ class RunningAcquisitionWidget(QWidget):
             data_visible = data
             t_visible = np.linspace(0, total_points / sample_rate, total_points, endpoint=False)
 
+        # Update the main acquisition plot
         self.curve.setData(t_visible, data_visible)
 
         current_time = total_points / sample_rate
@@ -193,19 +219,31 @@ class RunningAcquisitionWidget(QWidget):
 
             self.plot_widget.setYRange(y_min, y_max)
         else:
-            # If paused, do NOT setYRange, 
-            # so user can manually pan/zoom in pyqtgraph.
+            # If paused, do NOT setYRange
             pass
 
-        y_range = self.plot_widget.viewRange()[1]  # [1] is the Y range
+        # Update the "hey text box" with the current Y range from the main plot
+        y_range = self.plot_widget.viewRange()[1]  # [1] => Y range
         self.hey_text_box.setText(f"{y_range[0]:.2f} to {y_range[1]:.2f}")
+
+        template = self.model.template_processor.get_template()
+        if len(template) > 0:
+            x_axis = np.linspace(
+                0,
+                len(template)/self.model.template_processor.sample_rate,
+                len(template)
+            )
+            self.template_curve.setData(x_axis, template)
+        else:
+            # Or keep some default if template not ready
+            pass
 
     def disconnect(self):
         self.disconnecting = True
         self.acquisition_button.setObjectName("greyButton")
         self._update_button_style(self.acquisition_button)
         self.acquisition_button.setEnabled(False)
-        self.label.setText("Stopping Acquisition...")
+        self.acquisition_status_label.setText("Stopping Acquisition...")
 
         self.disconnect_button.setEnabled(False)
         self.disconnect_button.setText("Disconnecting...")
