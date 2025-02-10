@@ -219,7 +219,6 @@ class RunningAcquisitionWidget(QWidget):
 
             self.plot_widget.setYRange(y_min, y_max)
         else:
-            # If paused, do NOT setYRange
             pass
 
         # Update the "hey text box" with the current Y range from the main plot
@@ -235,7 +234,6 @@ class RunningAcquisitionWidget(QWidget):
             )
             self.template_curve.setData(x_axis, template)
         else:
-            # Or keep some default if template not ready
             pass
 
     def disconnect(self):
