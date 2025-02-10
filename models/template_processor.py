@@ -1,4 +1,9 @@
+import os
+import re
 import numpy as np
+
+import pandas as pd
+import wfdb
 
 class TemplateProcessor:
     def __init__(
@@ -71,14 +76,14 @@ class TemplateProcessor:
         # 3) Compute full autocorrelation
         autocorr = np.correlate(data_windowed, data_windowed, mode='full')
 
-        # The autocorrelation array is of length 2*len(data_chunk)-1
+        # The autocorrelation array is length 2*len(data_chunk)-1
         # 'mid_point' is the index in 'autocorr' corresponding to zero-lag
         mid_point = len(data_chunk) - 1
 
-        # 4) Skip up to 'mid_lag_offset' to avoid too-small lags
+        # 4) Skip up to 'min_lag_offset' to avoid too-small lags
         min_lag_offset = int(self.min_template_length * self.sample_rate)
 
-        # We look for the peak in the region: from mid_point+1+min_lag_offset to the end
+        # Region: from mid_point+1+min_lag_offset to the end
         ac_half_plus_min = autocorr[mid_point + 1 + min_lag_offset :]
 
         # 5) Find local peak in that subarray
@@ -90,14 +95,13 @@ class TemplateProcessor:
         # Store as the estimated period
         self.estimated_period = peak_lag_abs
 
-        # Edge case check: if estimated_period is zero or nonsensical, abort
         if self.estimated_period <= 0:
             return
 
         # 6) Figure out how many full periods fit into 'data_chunk'
         num_full_periods = len(data_chunk) // self.estimated_period
         if num_full_periods < 1:
-            # If not even one full period fits, we can't form a repeating pattern
+            # Not even one full period
             return
 
         # We'll only keep data that covers an integer multiple of the period
@@ -111,10 +115,63 @@ class TemplateProcessor:
 
         # Average across all rows to form the template
         template = reshaped.mean(axis=0)
-
         self.current_template = template
 
     def get_template(self) -> np.ndarray:
         if self.current_template is None:
             return np.array([])
         return self.current_template
+
+    # -------------------------------------------------------------------------
+    #  Save CSV & Save WFDB
+    # -------------------------------------------------------------------------
+    def save_csv(self, filename: str, channel_label="Template"):
+        template = self.get_template()
+        if template.size == 0:
+            print("No template to save.")
+            return
+
+        n_points = len(template)
+        # Build a time axis for the template
+        times = np.linspace(0, (n_points - 1) / self.sample_rate, n_points)
+
+        df = pd.DataFrame({
+            "Time_s": times,
+            channel_label: template
+        })
+        df.to_csv(filename, index=False)
+        print(f"Template saved as CSV to {filename}")
+
+    def save_wfdb(self, filename: str, channel_label="Template"):
+        template = self.get_template()
+        if template.size == 0:
+            print("No template to save.")
+            return
+        
+        # Extract directory and base filename
+        dir_name = os.path.dirname(filename)  # e.g., "C:\Users\Your Name\Documents"
+        base_name = os.path.basename(filename)  # e.g., "my_template.dat"
+        
+        # Remove the .dat extension from base_name
+        record_name, _ = os.path.splitext(base_name)  # "my_template"
+        
+        # If necessary, sanitize record_name to remove spaces or other chars
+        # (WFDB only allows letters, numbers, and hyphens)
+        record_name = re.sub(r'[^A-Za-z0-9-]+', '-', record_name)
+        
+        # Reshape template
+        p_signal = template.reshape(-1, 1)
+
+        wfdb.wrsamp(
+            record_name=record_name,
+            fs=self.sample_rate,
+            sig_name=[channel_label],
+            units=["V"],
+            p_signal=p_signal,
+            fmt=["212"],
+            adc_gain=[200],
+            baseline=[0],
+            write_dir=dir_name
+        )
+        
+        print(f"Template saved as WFDB: {os.path.join(dir_name, record_name)}.dat + .hea")

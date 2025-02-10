@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
-    QSizePolicy, QLabel, QFileDialog, QSpinBox, QLineEdit, QDoubleSpinBox
+    QSizePolicy, QLabel, QFileDialog, QSpinBox, QLineEdit, QDoubleSpinBox,
+    QRadioButton, QButtonGroup
 )
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
@@ -60,7 +61,7 @@ class RunningAcquisitionWidget(QWidget):
         self.setLayout(main_layout)
 
     def _build_top_row(self) -> QHBoxLayout:
-        """Creates the top row with Back button and 'Template' label."""
+        """Creates the top row with Back button, 'Template' label, and format radio buttons."""
         layout = QHBoxLayout()
 
         # Back button
@@ -77,6 +78,22 @@ class RunningAcquisitionWidget(QWidget):
 
         # Another expanding spacer
         layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        # --- Radio buttons: CSV vs. WFDB ---
+        self.csv_radio = QRadioButton("CSV")
+        self.wfdb_radio = QRadioButton("WFDB")
+
+        # Make sure one is checked by default
+        self.csv_radio.setChecked(True)
+
+        # Add them to a button group to ensure mutual exclusivity
+        self.format_group = QButtonGroup()
+        self.format_group.addButton(self.csv_radio)
+        self.format_group.addButton(self.wfdb_radio)
+
+        # Add these radio buttons to the layout
+        layout.addWidget(self.csv_radio)
+        layout.addWidget(self.wfdb_radio)
 
         return layout
 
@@ -120,7 +137,7 @@ class RunningAcquisitionWidget(QWidget):
 
         # -- Save Template Button
         self.save_template_button = QPushButton("Save Template")
-        self.save_template_button.setObjectName("amberButton")
+        self.save_template_button.setObjectName("greyButton")
         self.save_template_button.clicked.connect(self.save_template)
         controls_layout.addWidget(self.save_template_button)
 
@@ -176,7 +193,7 @@ class RunningAcquisitionWidget(QWidget):
         bottom_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         self.save_data_button = QPushButton("Save Data")
-        self.save_data_button.setObjectName("amberButton")
+        self.save_data_button.setObjectName("greyButton")
         self.save_data_button.clicked.connect(self.save_data)
         bottom_layout.addWidget(self.save_data_button)
 
@@ -215,9 +232,14 @@ class RunningAcquisitionWidget(QWidget):
         self.disconnect_button.setEnabled(True)
         self.disconnect_button.setText("Disconnect")
 
+        # Save template button
+        self.save_template_button.setEnabled(False)
+        self.save_template_button.setObjectName("greyButton")
+        self._update_button_style(self.save_template_button)
+
         # Save data button
-        self.save_data_button.setEnabled(True)
-        self.save_data_button.setObjectName("amberButton")
+        self.save_data_button.setEnabled(False)
+        self.save_data_button.setObjectName("greyButton")
         self._update_button_style(self.save_data_button)
 
         # Template plot
@@ -226,6 +248,9 @@ class RunningAcquisitionWidget(QWidget):
         # Reset spinboxes to match the model's initial values
         self.look_back_spinbox.setValue(self.model.template_processor.look_back_time)
         self.update_interval_spinbox.setValue(self.model.template_processor.update_interval_s)
+
+        # Reset radio buttons
+        self.csv_radio.setChecked(True)
 
     def _update_button_style(self, button: QPushButton):
         """Force a style refresh for a button that changes objectName."""
@@ -237,9 +262,22 @@ class RunningAcquisitionWidget(QWidget):
     #  Slots: Save, Pause/Resume, Update Graph, Disconnect, etc.
     # -------------------------------------------------------------------------
     def save_data(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Save Data", "", "*.csv")
-        if filename:
-            self.state_machine.model.signal_data.export_csv(filename)
+        signal_data = self.state_machine.model.signal_data
+
+        file_format = self._get_selected_format()
+        if file_format == "csv":
+            filter_str = "CSV Files (*.csv)"
+        else:
+            filter_str = "WFDB Files (*.dat)"
+
+        filename, _ = QFileDialog.getSaveFileName(self, "Save Data", "", filter_str)
+        if not filename:
+            return
+
+        if file_format == "csv":
+            signal_data.save_csv(filename, channel_label="Signal")
+        else:
+            signal_data.save_wfdb(filename, channel_label="Signal")
 
     def toggle_acquisition(self):
         self.state_machine.toggle_acquisition()
@@ -248,12 +286,26 @@ class RunningAcquisitionWidget(QWidget):
             self.acquisition_status_label.setText("Acquisition In Progress...")
             self.acquisition_button.setObjectName("amberButton")
             self.back_button.setEnabled(False)
+
+            self.save_template_button.setEnabled(False)
+            self.save_template_button.setObjectName("greyButton")
+
+            self.save_data_button.setEnabled(False)
+            self.save_data_button.setObjectName("greyButton")
         else:
             self.acquisition_button.setText("Resume Acquisition")
             self.acquisition_status_label.setText("Acquisition Paused")
             self.acquisition_button.setObjectName("greenButton")
             self.back_button.setEnabled(True)
+
+            self.save_template_button.setEnabled(True)
+            self.save_template_button.setObjectName("blueButton")
+
+            self.save_data_button.setEnabled(True)
+            self.save_data_button.setObjectName("blueButton")
         self._update_button_style(self.acquisition_button)
+        self._update_button_style(self.save_template_button)
+        self._update_button_style(self.save_data_button)
 
     def update_graph(self):
         """Main slot that updates both the main plot and the template plot."""
@@ -274,10 +326,6 @@ class RunningAcquisitionWidget(QWidget):
     #  Helper methods for update_graph
     # -------------------------------------------------------------------------
     def _prepare_visible_data(self, data: np.ndarray, sample_rate: float):
-        """
-        From the full data array, compute which portion is 'visible' based on
-        the time window spinbox.
-        """
         total_points = len(data)
         time_window = self.x_range_spinbox.value()
         visible_points = int(time_window * sample_rate)
@@ -294,7 +342,6 @@ class RunningAcquisitionWidget(QWidget):
         return t_visible, data_visible
 
     def _update_main_plot(self, t_visible: np.ndarray, data_visible: np.ndarray):
-        """Update the main plot curve and autoscale if necessary."""
         self.curve.setData(t_visible, data_visible)
 
         # X-axis range
@@ -315,7 +362,6 @@ class RunningAcquisitionWidget(QWidget):
         self.hey_text_box.setText(f"{y_range[0]:.2f} to {y_range[1]:.2f}")
 
     def _update_template_plot(self, template: np.ndarray):
-        """Update the template plot (curve + auto-scaling)."""
         if len(template) > 0:
             # Build time axis for template
             sample_rate = self.model.template_processor.sample_rate
@@ -340,15 +386,10 @@ class RunningAcquisitionWidget(QWidget):
             self.template_plot_widget.setYRange(-1, 1)
 
     def _compute_y_range(self, data: np.ndarray, margin_ratio: float = 0.05):
-        """
-        Compute a y-axis min & max with optional margin. If the data is flat,
-        produce a small band around that flat value.
-        """
         min_val = np.min(data)
         max_val = np.max(data)
 
         if min_val == max_val:
-            # If all points are the same, pick ±1
             return (min_val - 1, max_val + 1)
         else:
             margin = margin_ratio * (max_val - min_val)
@@ -363,22 +404,29 @@ class RunningAcquisitionWidget(QWidget):
     def _on_update_interval_changed(self, value: float):
         self.model.template_processor.update_interval_s = value
 
+    # -------------------------------------------------------------------------
+    #  Save Template
+    # -------------------------------------------------------------------------
     def save_template(self):
-        """
-        Save the current template to a CSV (or another format).
-        """
-        template = self.model.template_processor.get_template()
-        if len(template) == 0:
-            return  # No template to save
+        template_processor = self.model.template_processor
 
-        # Prompt for filename
-        filename, _ = QFileDialog.getSaveFileName(self, "Save Template", "", "*.csv")
+        file_format = self._get_selected_format()
+        if file_format == "csv":
+            filter_str = "CSV Files (*.csv)"
+        else:
+            filter_str = "WFDB Files (*.dat)"
+
+        filename, _ = QFileDialog.getSaveFileName(self, "Save Template", "", filter_str)
         if not filename:
             return
 
-        # Save to CSV
-        np.savetxt(filename, template, delimiter=",")
-        print(f"Template saved to {filename}")
+        if file_format == "csv":
+            template_processor.save_csv(filename, channel_label="Template")
+        else:
+            template_processor.save_wfdb(filename, channel_label="Template")
+
+    def _get_selected_format(self) -> str:
+        return "csv" if self.csv_radio.isChecked() else "wfdb"
 
     # -------------------------------------------------------------------------
     #  Disconnect Logic
@@ -396,6 +444,10 @@ class RunningAcquisitionWidget(QWidget):
         self.save_data_button.setEnabled(False)
         self.save_data_button.setObjectName("greyButton")
         self._update_button_style(self.save_data_button)
+
+        self.save_template_button.setEnabled(False)
+        self.save_template_button.setObjectName("greyButton")
+        self._update_button_style(self.save_template_button)
         self.back_button.setEnabled(False)
 
         self.device_controller.stop_acquisition()
