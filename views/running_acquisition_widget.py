@@ -49,11 +49,7 @@ class RunningAcquisitionWidget(QWidget):
         self.template_plot_widget.setBackground('w')
         self.template_plot_widget.setLabel('left', 'Amplitude', units='A')
         self.template_plot_widget.setLabel('bottom', 'Time', units='s')
-
-        # Create a simple line of zeros as an initial placeholder
-        x_vals = np.linspace(0, 1, 100)
-        y_vals = np.zeros(100)
-        self.template_curve = self.template_plot_widget.plot(x_vals, y_vals, pen='r')
+        self.template_curve = self.template_plot_widget.plot([], [], pen='r')
 
         main_layout.addWidget(self.template_plot_widget, stretch=1)
 
@@ -233,8 +229,30 @@ class RunningAcquisitionWidget(QWidget):
                 len(template)
             )
             self.template_curve.setData(x_axis, template)
+
+            # Auto-scale X-range for the template
+            x_end = x_axis[-1] if len(x_axis) > 0 else 1
+            if x_end <= 0:
+                x_end = 1
+            self.template_plot_widget.setXRange(0, x_end)
+
+            # Auto-scale Y-range for the template
+            min_t = np.min(template)
+            max_t = np.max(template)
+            if min_t == max_t:
+                # If flat, choose +/- 1 around the single value
+                y_min_t = min_t - 1
+                y_max_t = max_t + 1
+            else:
+                margin_t = 0.05 * (max_t - min_t)  # 5% margin
+                y_min_t = min_t - margin_t
+                y_max_t = max_t + margin_t
+            self.template_plot_widget.setYRange(y_min_t, y_max_t)
         else:
-            pass
+            self.template_curve.setData([], [])
+            # Reset to some default range when template is empty
+            self.template_plot_widget.setXRange(0, 1)
+            self.template_plot_widget.setYRange(-1, 1)
 
     def disconnect(self):
         self.disconnecting = True
