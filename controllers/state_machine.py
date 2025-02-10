@@ -59,8 +59,8 @@ class StateMachine(QObject):
         self.model.model_changed.emit()
 
     def start_acquisition(self):
-        self.transition_to(AppState.RUNNING_ACQUISITION)
         self.model.start_acquisition()
+        self.transition_to(AppState.RUNNING_ACQUISITION)
 
     def toggle_acquisition(self):
         self.model.acquisition_running = not self.model.acquisition_running

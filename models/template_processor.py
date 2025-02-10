@@ -4,19 +4,19 @@ class TemplateProcessor:
     def __init__(
         self,
         sample_rate: float = 100.0,
-        init_wait_time_s: float = 20.0,
-        update_interval_s: float = 1.0,
-        min_template_length_s: float = 0.1
+        look_back_time_s: float = 4.0,
+        update_interval_s: float = 4.0,
+        min_template_length_s: float = 0.2
     ):
         """
         :param sample_rate: Samples per second of incoming data.
-        :param init_wait_time_s: How many seconds of data to accumulate
+        :param look_back_time_s: How many seconds of data to accumulate
                                  before the first template computation.
         :param update_interval_s: How often to (re-)compute the template.
         :param min_template_length_s: Minimum length of the template in seconds.
         """
         self.sample_rate = sample_rate
-        self.init_wait_time = init_wait_time_s
+        self.look_back_time = look_back_time_s
         self.update_interval_s = update_interval_s
         self.min_template_length = min_template_length_s
 
@@ -32,7 +32,7 @@ class TemplateProcessor:
         current_buffer_time = len(self.buffer) / self.sample_rate
 
         # If we haven't reached the required initial wait time, do nothing
-        if current_buffer_time < self.init_wait_time:
+        if current_buffer_time < self.look_back_time:
             return
 
         # Check if it's time to update the template
@@ -53,7 +53,7 @@ class TemplateProcessor:
         """
 
         # Determine how many samples we will analyze
-        samples_to_analyze = int(self.init_wait_time * self.sample_rate)
+        samples_to_analyze = int(self.look_back_time * self.sample_rate)
         if len(self.buffer) < samples_to_analyze:
             # Not enough data to do anything
             return

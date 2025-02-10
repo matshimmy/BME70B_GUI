@@ -55,7 +55,7 @@ class AcquisitionService(QObject):
         self._running = True
 
         # How many samples to emit at a time
-        chunk_size = 1
+        chunk_size = 30
 
         # The time interval for each sample at the new sampling rate
         sample_interval = 1.0 / self.new_fs

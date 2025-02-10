@@ -84,6 +84,7 @@ class MainWindow(QMainWindow):
         elif new_state == AppState.ACQUISITION_OPTIONS:
             self.stacked_widget.setCurrentIndex(3)
         elif new_state == AppState.RUNNING_ACQUISITION:
+            self.running_acquisition_screen.reset_ui()
             self.stacked_widget.setCurrentIndex(4)
         elif new_state == AppState.SIMULATION_OPTIONS:
             self.stacked_widget.setCurrentIndex(5)

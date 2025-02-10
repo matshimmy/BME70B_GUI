@@ -60,8 +60,8 @@ class Model(QObject):
         # Create TemplateProcessor
         self.template_processor = TemplateProcessor(
             sample_rate=self.sampling_rate,
-            init_wait_time_s=10,
-            update_interval_s=0.5
+            look_back_time_s=4.0,
+            update_interval_s=4.0
         )
         # Connect the signal from SignalData to the processor's slot
         self.signal_data.new_chunk_appended.connect(
@@ -71,7 +71,8 @@ class Model(QObject):
         self.model_changed.emit()
 
     def reset_model(self):
-        self.signal_data = SignalData(sample_rate=100)
+        self.signal_data = SignalData()
+        self.template_processor = TemplateProcessor()
 
         # Connection
         self.connection_type = None

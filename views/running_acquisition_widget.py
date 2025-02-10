@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
-    QSizePolicy, QLabel, QFileDialog, QSpinBox, QLineEdit
+    QSizePolicy, QLabel, QFileDialog, QSpinBox, QLineEdit, QDoubleSpinBox
 )
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
@@ -38,6 +38,9 @@ class RunningAcquisitionWidget(QWidget):
         # Template Plot
         self._build_template_plot(main_layout)
 
+        # Build template parameter controls below the template plot
+        self._build_template_controls(main_layout)
+        
         # Status label
         self.acquisition_status_label = QLabel("Acquisition In Progress...")
         main_layout.addWidget(self.acquisition_status_label)
@@ -88,6 +91,41 @@ class RunningAcquisitionWidget(QWidget):
 
         # Add widget to parent layout
         parent_layout.addWidget(self.template_plot_widget, stretch=1)
+
+    def _build_template_controls(self, parent_layout: QVBoxLayout):
+        controls_layout = QHBoxLayout()
+
+        # -- look_back_time_s
+        self.look_back_label = QLabel("Look Back (s):")
+        controls_layout.addWidget(self.look_back_label)
+
+        self.look_back_spinbox = QDoubleSpinBox()
+        self.look_back_spinbox.setRange(0.5, 60.0)
+        self.look_back_spinbox.setDecimals(2)
+        self.look_back_spinbox.valueChanged.connect(self._on_look_back_changed)
+        controls_layout.addWidget(self.look_back_spinbox)
+
+        # -- update_interval_s
+        self.update_interval_label = QLabel("Update Interval (s):")
+        controls_layout.addWidget(self.update_interval_label)
+
+        self.update_interval_spinbox = QDoubleSpinBox()
+        self.update_interval_spinbox.setRange(0.1, 10.0)
+        self.update_interval_spinbox.setDecimals(2)
+        self.update_interval_spinbox.valueChanged.connect(self._on_update_interval_changed)
+        controls_layout.addWidget(self.update_interval_spinbox)
+
+        # Spacer to push "Save Template" button to the right
+        controls_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        # -- Save Template Button
+        self.save_template_button = QPushButton("Save Template")
+        self.save_template_button.setObjectName("amberButton")
+        self.save_template_button.clicked.connect(self.save_template)
+        controls_layout.addWidget(self.save_template_button)
+
+        # Add this row of controls to the parent layout
+        parent_layout.addLayout(controls_layout)
 
     def _build_main_plot(self, parent_layout: QVBoxLayout):
         """Add the main acquisition plot widget."""
@@ -184,6 +222,10 @@ class RunningAcquisitionWidget(QWidget):
 
         # Template plot
         self.template_curve.setData([], [])
+
+        # Reset spinboxes to match the model's initial values
+        self.look_back_spinbox.setValue(self.model.template_processor.look_back_time)
+        self.update_interval_spinbox.setValue(self.model.template_processor.update_interval_s)
 
     def _update_button_style(self, button: QPushButton):
         """Force a style refresh for a button that changes objectName."""
@@ -311,6 +353,32 @@ class RunningAcquisitionWidget(QWidget):
         else:
             margin = margin_ratio * (max_val - min_val)
             return (min_val - margin, max_val + margin)
+
+    # -------------------------------------------------------------------------
+    #  Template Parameter Handlers
+    # -------------------------------------------------------------------------
+    def _on_look_back_changed(self, value: float):
+        self.model.template_processor.look_back_time = value
+
+    def _on_update_interval_changed(self, value: float):
+        self.model.template_processor.update_interval_s = value
+
+    def save_template(self):
+        """
+        Save the current template to a CSV (or another format).
+        """
+        template = self.model.template_processor.get_template()
+        if len(template) == 0:
+            return  # No template to save
+
+        # Prompt for filename
+        filename, _ = QFileDialog.getSaveFileName(self, "Save Template", "", "*.csv")
+        if not filename:
+            return
+
+        # Save to CSV
+        np.savetxt(filename, template, delimiter=",")
+        print(f"Template saved to {filename}")
 
     # -------------------------------------------------------------------------
     #  Disconnect Logic
