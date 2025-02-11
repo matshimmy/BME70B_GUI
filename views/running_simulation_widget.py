@@ -10,6 +10,7 @@ from controllers.device_controller import DeviceController
 from controllers.state_machine import StateMachine
 from models.model import Model
 from enums.simulation_type import SimulationType
+from views.template_editor import TemplateEditor
 
 class RunningSimulationWidget(QWidget):
     def __init__(self, model: Model, state_machine: StateMachine, device_controller: DeviceController):
@@ -92,12 +93,10 @@ class RunningSimulationWidget(QWidget):
 
     def _build_template_placeholder(self, parent_layout: QVBoxLayout):
         """
-        A placeholder label that appears ONLY if self.model.simulation_type == TEMPLATE.
+        Create the template editor widget that appears only if simulation_type == TEMPLATE.
         """
-        self.template_label = QLabel("to be implemented")
-        self.template_label.setAlignment(Qt.AlignCenter)
-
-        parent_layout.addWidget(self.template_label)
+        self.template_editor = TemplateEditor()
+        parent_layout.addWidget(self.template_editor, stretch=1)
 
     def _build_bottom_controls(self, parent_layout: QVBoxLayout):
         bottom_layout = QHBoxLayout()
@@ -159,11 +158,15 @@ class RunningSimulationWidget(QWidget):
             self.simulation_status_label.setText("Transferring...")
             self.simulation_button.setObjectName("amberButton")
             self.back_button.setEnabled(False)
+            if self.model.simulation_type == SimulationType.TEMPLATE:
+                self.template_editor.enable_editing(False)
         else:
             self.simulation_button.setText("Resume Simulation")
             self.simulation_status_label.setText("Signal")
             self.simulation_button.setObjectName("greenButton")
             self.back_button.setEnabled(True)
+            if self.model.simulation_type == SimulationType.TEMPLATE:
+                self.template_editor.enable_editing(True)
 
         self._update_button_style(self.simulation_button)
 
@@ -208,6 +211,6 @@ class RunningSimulationWidget(QWidget):
     # -------------------------------------------------------------------------
     def on_model_changed(self):
         if self.model.simulation_type == SimulationType.TEMPLATE:
-            self.template_label.show()
+            self.template_editor.show()
         else:
-            self.template_label.hide()
+            self.template_editor.hide()
