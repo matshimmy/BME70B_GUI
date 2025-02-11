@@ -58,11 +58,12 @@ class Model(QObject):
     def start_acquisition(self):
         self.signal_data = SignalData(sample_rate=self.sampling_rate)
         # Create TemplateProcessor
-        self.template_processor = TemplateProcessor(
-            sample_rate=self.sampling_rate,
-            look_back_time_s=4.0,
-            update_interval_s=4.0
-        )
+        if self.get_template:
+            self.template_processor = TemplateProcessor(
+                sample_rate=self.sampling_rate,
+                look_back_time_s=4.0,
+                update_interval_s=4.0
+            )
         # Connect the signal from SignalData to the processor's slot
         self.signal_data.new_chunk_appended.connect(
             self.template_processor.append_data

@@ -36,32 +36,19 @@ class RunningAcquisitionWidget(QWidget):
         top_row_layout = self._build_top_row()
         main_layout.addLayout(top_row_layout)
 
-        # Template Plot
-        self._build_template_plot(main_layout)
-
-        # Build template parameter controls below the template plot
-        self._build_template_controls(main_layout)
-        
-        # Status label
-        self.acquisition_status_label = QLabel("Acquisition In Progress...")
-        main_layout.addWidget(self.acquisition_status_label)
-
-        # Main data plot
         self._build_main_plot(main_layout)
 
-        # Time window row
         self._build_time_window_selector(main_layout)
 
-        # Pause/Resume button
-        self._build_acquisition_button(main_layout)
+        self._build_template_plot(main_layout)
 
-        # Disconnect / Save Data row
+        self._build_template_controls(main_layout)
+
         self._build_bottom_controls(main_layout)
 
         self.setLayout(main_layout)
 
     def _build_top_row(self) -> QHBoxLayout:
-        """Creates the top row with Back button, 'Template' label, and format radio buttons."""
         layout = QHBoxLayout()
 
         # Back button
@@ -73,8 +60,8 @@ class RunningAcquisitionWidget(QWidget):
         # Spacer for centering
         layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        self.template_label = QLabel("Template")
-        layout.addWidget(self.template_label)
+        self.acquisition_status_label = QLabel("Acquisition In Progress...")
+        layout.addWidget(self.acquisition_status_label)
 
         # Another expanding spacer
         layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -97,8 +84,42 @@ class RunningAcquisitionWidget(QWidget):
 
         return layout
 
+    def _build_main_plot(self, parent_layout: QVBoxLayout):
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setBackground('w')
+        self.plot_widget.setLabel('left', 'Amplitude', units='A')
+        self.plot_widget.setLabel('bottom', 'Time', units='s')
+        self.curve = self.plot_widget.plot([], [], pen='b')
+        parent_layout.addWidget(self.plot_widget, stretch=1)
+
+    def _build_time_window_selector(self, parent_layout: QVBoxLayout):
+        x_range_layout = QHBoxLayout()
+        self.x_range_label = QLabel("Time window (s):")
+        x_range_layout.addWidget(self.x_range_label)
+
+        self.x_range_spinbox = QSpinBox()
+        self.x_range_spinbox.setRange(5, 60)
+        self.x_range_spinbox.valueChanged.connect(self.update_graph)
+        x_range_layout.addWidget(self.x_range_spinbox)
+
+        # Spacer for alignment
+        x_range_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        self.save_data_button = QPushButton("Save Data")
+        self.save_data_button.setObjectName("greyButton")
+        self.save_data_button.clicked.connect(self.save_data)
+        x_range_layout.addWidget(self.save_data_button)
+
+        parent_layout.addLayout(x_range_layout)
+
     def _build_template_plot(self, parent_layout: QVBoxLayout):
-        """Add the template plot widget."""
+        layout = QHBoxLayout()
+        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.template_label = QLabel("Template")
+        layout.addWidget(self.template_label)
+        layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        parent_layout.addLayout(layout)
+
         self.template_plot_widget = pg.PlotWidget()
         self.template_plot_widget.setBackground('w')
         self.template_plot_widget.setLabel('left', 'Amplitude', units='A')
@@ -141,45 +162,7 @@ class RunningAcquisitionWidget(QWidget):
         self.save_template_button.clicked.connect(self.save_template)
         controls_layout.addWidget(self.save_template_button)
 
-        # Add this row of controls to the parent layout
         parent_layout.addLayout(controls_layout)
-
-    def _build_main_plot(self, parent_layout: QVBoxLayout):
-        """Add the main acquisition plot widget."""
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setBackground('w')
-        self.plot_widget.setLabel('left', 'Amplitude', units='A')
-        self.plot_widget.setLabel('bottom', 'Time', units='s')
-        # Create an empty curve for the main data
-        self.curve = self.plot_widget.plot([], [], pen='b')
-        parent_layout.addWidget(self.plot_widget, stretch=1)
-
-    def _build_time_window_selector(self, parent_layout: QVBoxLayout):
-        """Add the spinbox and line edit to control/view the main plot range."""
-        x_range_layout = QHBoxLayout()
-        self.x_range_label = QLabel("Time window (s):")
-        x_range_layout.addWidget(self.x_range_label)
-
-        self.x_range_spinbox = QSpinBox()
-        self.x_range_spinbox.setRange(5, 60)
-        self.x_range_spinbox.valueChanged.connect(self.update_graph)
-        x_range_layout.addWidget(self.x_range_spinbox)
-
-        # Spacer for alignment
-        x_range_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
-        self.hey_text_box = QLineEdit()
-        self.hey_text_box.setReadOnly(True)
-        x_range_layout.addWidget(self.hey_text_box)
-
-        parent_layout.addLayout(x_range_layout)
-
-    def _build_acquisition_button(self, parent_layout: QVBoxLayout):
-        """Add the Pause/Resume acquisition button."""
-        self.acquisition_button = QPushButton("Pause Acquisition")
-        self.acquisition_button.setObjectName("amberButton")
-        self.acquisition_button.clicked.connect(self.toggle_acquisition)
-        parent_layout.addWidget(self.acquisition_button)
 
     def _build_bottom_controls(self, parent_layout: QVBoxLayout):
         """Add the bottom row with 'Disconnect' and 'Save Data' buttons."""
@@ -192,10 +175,10 @@ class RunningAcquisitionWidget(QWidget):
         # Spacer to push the Save Data button to the right
         bottom_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        self.save_data_button = QPushButton("Save Data")
-        self.save_data_button.setObjectName("greyButton")
-        self.save_data_button.clicked.connect(self.save_data)
-        bottom_layout.addWidget(self.save_data_button)
+        self.acquisition_button = QPushButton("Pause Acquisition")
+        self.acquisition_button.setObjectName("amberButton")
+        self.acquisition_button.clicked.connect(self.toggle_acquisition)
+        bottom_layout.addWidget(self.acquisition_button)
 
         parent_layout.addLayout(bottom_layout)
 
@@ -252,11 +235,32 @@ class RunningAcquisitionWidget(QWidget):
         # Reset radio buttons
         self.csv_radio.setChecked(True)
 
+        # Show/hide all template-related widgets
+        self._update_template_visibility()
+
     def _update_button_style(self, button: QPushButton):
         """Force a style refresh for a button that changes objectName."""
         button.style().unpolish(button)
         button.style().polish(button)
         button.update()
+
+    def _update_template_visibility(self):
+        if self.model.get_template:
+            self.template_label.show()
+            self.template_plot_widget.show()
+            self.look_back_label.show()
+            self.look_back_spinbox.show()
+            self.update_interval_label.show()
+            self.update_interval_spinbox.show()
+            self.save_template_button.show()
+        else:
+            self.template_label.hide()
+            self.template_plot_widget.hide()
+            self.look_back_label.hide()
+            self.look_back_spinbox.hide()
+            self.update_interval_label.hide()
+            self.update_interval_spinbox.hide()
+            self.save_template_button.hide()
 
     # -------------------------------------------------------------------------
     #  Slots: Save, Pause/Resume, Update Graph, Disconnect, etc.
@@ -303,6 +307,7 @@ class RunningAcquisitionWidget(QWidget):
 
             self.save_data_button.setEnabled(True)
             self.save_data_button.setObjectName("blueButton")
+
         self._update_button_style(self.acquisition_button)
         self._update_button_style(self.save_template_button)
         self._update_button_style(self.save_data_button)
@@ -319,8 +324,9 @@ class RunningAcquisitionWidget(QWidget):
         self._update_main_plot(t_visible, data_visible)
 
         # 3) Update the template plot
-        template = self.model.template_processor.get_template()
-        self._update_template_plot(template)
+        if self.model.get_template:
+            template = self.model.template_processor.get_template()
+            self._update_template_plot(template)
 
     # -------------------------------------------------------------------------
     #  Helper methods for update_graph
@@ -356,10 +362,6 @@ class RunningAcquisitionWidget(QWidget):
         if self.model.acquisition_running and len(data_visible) > 0:
             y_min, y_max = self._compute_y_range(data_visible)
             self.plot_widget.setYRange(y_min, y_max)
-
-        # Update the "hey text box" with the current Y range
-        y_range = self.plot_widget.viewRange()[1]  # [1] => Y range
-        self.hey_text_box.setText(f"{y_range[0]:.2f} to {y_range[1]:.2f}")
 
     def _update_template_plot(self, template: np.ndarray):
         if len(template) > 0:
