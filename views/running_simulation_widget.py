@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
-    QSizePolicy, QLabel, QSpinBox, QStackedWidget
+    QSizePolicy, QLabel, QSpinBox
 )
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
+import numpy as np
 
 from controllers.device_controller import DeviceController
 from controllers.state_machine import StateMachine
@@ -36,10 +37,11 @@ class RunningSimulationWidget(QWidget):
         top_row_layout = self._build_top_row()
         main_layout.addLayout(top_row_layout)
 
-        self._build_main_plot(main_layout)
+        self._build_signal_plot(main_layout)
 
         self._build_time_window_selector(main_layout)
 
+        self._build_template_placeholder(main_layout)
         self._build_bottom_controls(main_layout)
 
         self.setLayout(main_layout)
@@ -64,27 +66,23 @@ class RunningSimulationWidget(QWidget):
 
         return layout
 
-    def _build_main_plot(self, parent_layout: QVBoxLayout):
-        self.plot_stack = QStackedWidget()
+    def _build_signal_plot(self, parent_layout: QVBoxLayout):
+        self.signal_plot = pg.PlotWidget(title="Signal Transmission Plot")
+        self.signal_plot.setBackground('w')
+        self.signal_plot.setLabel('left', 'Amplitude', units='A')
+        self.signal_plot.setLabel('bottom', 'Time', units='s')
+        self.curve = self.signal_plot.plot(pen='b')
 
-        # 1) Template Plot
-        self.template_plot = pg.PlotWidget(title="Template Plot")
-        self.template_plot.setBackground('w')
-        self.template_plot.setLabel('left', 'Amplitude', units='A')
-        self.template_plot.setLabel('bottom', 'Time', units='s')
-        self.plot_stack.addWidget(self.template_plot)
+        parent_layout.addWidget(self.signal_plot, stretch=1)
 
-        # 2) Full Signal Plot
-        self.full_signal_plot = pg.PlotWidget(title="Full Signal Plot")
-        self.full_signal_plot.setBackground('w')
-        self.full_signal_plot.setLabel('left', 'Amplitude', units='A')
-        self.full_signal_plot.setLabel('bottom', 'Time', units='s')
-        self.plot_stack.addWidget(self.full_signal_plot)
+    def _build_template_placeholder(self, parent_layout: QVBoxLayout):
+        """
+        A placeholder label that appears ONLY if self.model.simulation_type == TEMPLATE.
+        """
+        self.template_label = QLabel("to be implemented")
+        self.template_label.setAlignment(Qt.AlignCenter)
 
-        # By default, we’ll start with the Template Plot shown
-        self.plot_stack.setCurrentWidget(self.template_plot)
-
-        parent_layout.addWidget(self.plot_stack, stretch=1)
+        parent_layout.addWidget(self.template_label)
 
     def _build_time_window_selector(self, parent_layout: QVBoxLayout):
         x_range_layout = QHBoxLayout()
@@ -127,6 +125,10 @@ class RunningSimulationWidget(QWidget):
 
         # Default time window
         self.x_range_spinbox.setValue(5)
+        self.update_graph()
+
+        # Clear the main plot
+        self.curve.setData([], [])
 
         # Simulation status
         self.simulation_status_label.setText("Signal")
@@ -140,9 +142,6 @@ class RunningSimulationWidget(QWidget):
         # Disconnect button
         self.disconnect_button.setEnabled(True)
         self.disconnect_button.setText("Disconnect")
-
-        # Default to Template plot in the stack
-        self.plot_stack.setCurrentWidget(self.template_plot)
 
     def _update_button_style(self, button: QPushButton):
         """Force a style refresh for a button that changes objectName."""
@@ -169,11 +168,13 @@ class RunningSimulationWidget(QWidget):
         self._update_button_style(self.simulation_button)
 
     def update_graph(self):
-        """
-        This is where you'd normally update your plot based on your model data.
-        Right now, it's empty until you implement your real plotting logic.
-        """
-        pass
+        t_visible = np.linspace(0, 10, 100, endpoint=False)
+        time_window = self.x_range_spinbox.value()
+        current_time = t_visible[-1] if len(t_visible) else 0
+        if current_time < time_window:
+            self.signal_plot.setXRange(0, time_window)
+        else:
+            self.signal_plot.setXRange(current_time - time_window, current_time)
 
     # -------------------------------------------------------------------------
     #  Disconnect Logic
@@ -207,6 +208,6 @@ class RunningSimulationWidget(QWidget):
     # -------------------------------------------------------------------------
     def on_model_changed(self):
         if self.model.simulation_type == SimulationType.TEMPLATE:
-            self.plot_stack.setCurrentWidget(self.template_plot)
+            self.template_label.show()
         else:
-            self.plot_stack.setCurrentWidget(self.full_signal_plot)
+            self.template_label.hide()
