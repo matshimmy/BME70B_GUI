@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.acquisition_options_screen = AcquisitionOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_acquisition_screen = RunningAcquisitionWidget(model=self.state_machine.model, state_machine=self.state_machine, device_controller=self.device_controller)
         self.simulation_options_screen = SimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
-        self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.running_simulation_screen = RunningSimulationWidget(model=self.state_machine.model, state_machine=self.state_machine, device_controller=self.device_controller)
         self.stimulation_options_screen = StimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_stimulation_screen = RunningStimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.graceful_disconnect_screen = GracefulDisconnectWidget(model=self.state_machine.model, device_controller=self.device_controller)
@@ -65,12 +65,20 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.stacked_widget)
 
         # DEBUG: set state and model for running acquisition development
+        # from enums.connection_type import ConnectionType
+        # self.state_machine.model.connection_type = ConnectionType.USB
+        # self.state_machine.model.is_connected = True
+        # self.state_machine.model.power_level = 100
+        # self.state_machine.model.transmission_ok = True
+        # self.state_machine.transition_to(AppState.ACQUISITION_OPTIONS)
+
+        # DEBUG: set state and model for running simulation development
         from enums.connection_type import ConnectionType
         self.state_machine.model.connection_type = ConnectionType.USB
         self.state_machine.model.is_connected = True
         self.state_machine.model.power_level = 100
         self.state_machine.model.transmission_ok = True
-        self.state_machine.transition_to(AppState.ACQUISITION_OPTIONS)
+        self.state_machine.transition_to(AppState.SIMULATION_OPTIONS)
 
 
     def on_state_changed(self, new_state):
@@ -88,6 +96,7 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(4)
         elif new_state == AppState.SIMULATION_OPTIONS:
             self.stacked_widget.setCurrentIndex(5)
+            self.running_simulation_screen.reset_ui()
         elif new_state == AppState.RUNNING_SIMULATION:
             self.stacked_widget.setCurrentIndex(6)
         elif new_state == AppState.STIMULATION_OPTIONS:

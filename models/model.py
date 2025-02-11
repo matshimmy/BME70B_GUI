@@ -99,6 +99,8 @@ class Model(QObject):
         self.sixty_hz_artifact = False
         self.custom_csv_path = None
 
+        self.simulation_running = False
+
         # Stimulation
         self.stimulation_frequency = None
         self.stimulation_pulse_width = None

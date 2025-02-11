@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
-    QSizePolicy, QLabel, QFileDialog, QSpinBox, QLineEdit, QDoubleSpinBox,
+    QSizePolicy, QLabel, QFileDialog, QSpinBox, QDoubleSpinBox,
     QRadioButton, QButtonGroup
 )
 from PyQt5.QtCore import Qt

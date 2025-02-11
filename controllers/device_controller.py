@@ -154,13 +154,19 @@ class DeviceController:
         self.state_machine.append_acquisition_data(chunk)
 
     # --------------------------------------------------------------------------
-    # OTHER DEVICE TASKS (ACQUISITION, SIMULATION, STIMULATION)
+    # SIMULATION TASK
+    # --------------------------------------------------------------------------
+    def start_simulation(self):
+        self.state_machine.start_simulation()
+
+    def stop_simulation(self):
+        self.state_machine.stop_simulation()
+
+    # --------------------------------------------------------------------------
+    # OTHER DEVICE TASKS (ACQUISITION, STIMULATION)
     # --------------------------------------------------------------------------
     def disconnect_device(self):
         self.state_machine.disconnect_device()
-
-    def start_simulation(self):
-        self.state_machine.start_simulation()
 
     def start_stimulation(self):
         self.state_machine.start_stimulation()
