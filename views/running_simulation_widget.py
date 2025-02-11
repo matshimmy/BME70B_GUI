@@ -1,15 +1,14 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
-    QSizePolicy, QLabel, QSpinBox
+    QSizePolicy, QLabel, QSpinBox, QStackedWidget
 )
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
-import numpy as np
 
 from controllers.device_controller import DeviceController
 from controllers.state_machine import StateMachine
 from models.model import Model
-
+from enums.simulation_type import SimulationType
 
 class RunningSimulationWidget(QWidget):
     def __init__(self, model: Model, state_machine: StateMachine, device_controller: DeviceController):
@@ -22,6 +21,9 @@ class RunningSimulationWidget(QWidget):
 
         self._build_ui()
         self.reset_ui()
+
+        # Listen for changes to the model
+        self.model.model_changed.connect(self.on_model_changed)
 
     # -------------------------------------------------------------------------
     #  Build UI
@@ -63,12 +65,26 @@ class RunningSimulationWidget(QWidget):
         return layout
 
     def _build_main_plot(self, parent_layout: QVBoxLayout):
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setBackground('w')
-        self.plot_widget.setLabel('left', 'Amplitude', units='A')
-        self.plot_widget.setLabel('bottom', 'Time', units='s')
-        self.curve = self.plot_widget.plot([], [], pen='b')
-        parent_layout.addWidget(self.plot_widget, stretch=1)
+        self.plot_stack = QStackedWidget()
+
+        # 1) Template Plot
+        self.template_plot = pg.PlotWidget(title="Template Plot")
+        self.template_plot.setBackground('w')
+        self.template_plot.setLabel('left', 'Amplitude', units='A')
+        self.template_plot.setLabel('bottom', 'Time', units='s')
+        self.plot_stack.addWidget(self.template_plot)
+
+        # 2) Full Signal Plot
+        self.full_signal_plot = pg.PlotWidget(title="Full Signal Plot")
+        self.full_signal_plot.setBackground('w')
+        self.full_signal_plot.setLabel('left', 'Amplitude', units='A')
+        self.full_signal_plot.setLabel('bottom', 'Time', units='s')
+        self.plot_stack.addWidget(self.full_signal_plot)
+
+        # By default, we’ll start with the Template Plot shown
+        self.plot_stack.setCurrentWidget(self.template_plot)
+
+        parent_layout.addWidget(self.plot_stack, stretch=1)
 
     def _build_time_window_selector(self, parent_layout: QVBoxLayout):
         x_range_layout = QHBoxLayout()
@@ -112,10 +128,6 @@ class RunningSimulationWidget(QWidget):
         # Default time window
         self.x_range_spinbox.setValue(5)
 
-        # Clear the main plot
-        self.curve.setData([], [])
-        self.plot_widget.setXRange(0, 5)
-
         # Simulation status
         self.simulation_status_label.setText("Signal")
 
@@ -128,6 +140,9 @@ class RunningSimulationWidget(QWidget):
         # Disconnect button
         self.disconnect_button.setEnabled(True)
         self.disconnect_button.setText("Disconnect")
+
+        # Default to Template plot in the stack
+        self.plot_stack.setCurrentWidget(self.template_plot)
 
     def _update_button_style(self, button: QPushButton):
         """Force a style refresh for a button that changes objectName."""
@@ -154,8 +169,11 @@ class RunningSimulationWidget(QWidget):
         self._update_button_style(self.simulation_button)
 
     def update_graph(self):
+        """
+        This is where you'd normally update your plot based on your model data.
+        Right now, it's empty until you implement your real plotting logic.
+        """
         pass
-
 
     # -------------------------------------------------------------------------
     #  Disconnect Logic
@@ -183,3 +201,12 @@ class RunningSimulationWidget(QWidget):
         self.device_controller.stop_simulation()
         self.state_machine.transition_to_simulation_options()
         self.reset_ui()
+
+    # -------------------------------------------------------------------------
+    #  Reacting to Model Changes
+    # -------------------------------------------------------------------------
+    def on_model_changed(self):
+        if self.model.simulation_type == SimulationType.TEMPLATE:
+            self.plot_stack.setCurrentWidget(self.template_plot)
+        else:
+            self.plot_stack.setCurrentWidget(self.full_signal_plot)
