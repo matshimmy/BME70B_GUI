@@ -75,15 +75,6 @@ class RunningSimulationWidget(QWidget):
 
         parent_layout.addWidget(self.signal_plot, stretch=1)
 
-    def _build_template_placeholder(self, parent_layout: QVBoxLayout):
-        """
-        A placeholder label that appears ONLY if self.model.simulation_type == TEMPLATE.
-        """
-        self.template_label = QLabel("to be implemented")
-        self.template_label.setAlignment(Qt.AlignCenter)
-
-        parent_layout.addWidget(self.template_label)
-
     def _build_time_window_selector(self, parent_layout: QVBoxLayout):
         x_range_layout = QHBoxLayout()
         self.x_range_label = QLabel("Time window (s):")
@@ -98,6 +89,15 @@ class RunningSimulationWidget(QWidget):
         x_range_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         parent_layout.addLayout(x_range_layout)
+
+    def _build_template_placeholder(self, parent_layout: QVBoxLayout):
+        """
+        A placeholder label that appears ONLY if self.model.simulation_type == TEMPLATE.
+        """
+        self.template_label = QLabel("to be implemented")
+        self.template_label.setAlignment(Qt.AlignCenter)
+
+        parent_layout.addWidget(self.template_label)
 
     def _build_bottom_controls(self, parent_layout: QVBoxLayout):
         bottom_layout = QHBoxLayout()
