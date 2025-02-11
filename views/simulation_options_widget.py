@@ -16,10 +16,9 @@ class SimulationOptionsWidget(QWidget):
         self.device_controller = device_controller
         self.state_machine = state_machine
 
-        # Will store the chosen CSV path
-        self.custom_noise_file = None
-
-        # Main vertical layout
+        # ---------------------------
+        # Main Layout
+        # ---------------------------
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
 
@@ -31,26 +30,26 @@ class SimulationOptionsWidget(QWidget):
         self.back_button.setObjectName("backButton")
         self.back_button.clicked.connect(self.state_machine.on_back_options_clicked)
 
-        # Add an expanding spacer to push the button to the left
         back_button_layout.addWidget(self.back_button)
         back_button_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-
-        # Add the back button layout to the main layout
         main_layout.addLayout(back_button_layout)
 
         # Spacer at the top
         main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
+        # ---------------------------
+        # Options Layout
+        # ---------------------------
         options_layout = QVBoxLayout()
         options_layout.setAlignment(Qt.AlignCenter)
 
-        # ---------------------------
-        # Radio Buttons for "Template" vs. "Full Signal"
-        # ---------------------------
         self.label = QLabel("Simulation Type")
         self.label.setAlignment(Qt.AlignCenter)
         options_layout.addWidget(self.label)
 
+        # ---------------------------
+        # Radio Buttons (Template vs. Full Signal)
+        # ---------------------------
         radio_layout = QHBoxLayout()
         radio_layout.setAlignment(Qt.AlignCenter)
 
@@ -64,13 +63,46 @@ class SimulationOptionsWidget(QWidget):
         radio_layout.addWidget(self.full_signal_radio)
         options_layout.addLayout(radio_layout)
 
-        # QButtonGroup so we can see which button is checked more easily
+        # Group the radio buttons
         self.radio_group = QButtonGroup()
         self.radio_group.addButton(self.template_radio, 0)
         self.radio_group.addButton(self.full_signal_radio, 1)
 
         # ---------------------------
-        # Drop-down (ComboBox) for transmission rate
+        # Custom Signal File (CSV)
+        # ---------------------------
+        self.custom_signal_container = QWidget()
+        self.custom_signal_layout = QVBoxLayout()
+        self.custom_signal_layout.setAlignment(Qt.AlignCenter)
+
+        self.custom_signal_file = None
+
+        self.custom_signal_label = QLabel("Custom Signal CSV:")
+        self.custom_signal_label.setAlignment(Qt.AlignCenter)
+        self.custom_signal_layout.addWidget(self.custom_signal_label)
+
+        self.custom_signal_path = QLabel("[None Selected]")
+        self.custom_signal_path.setWordWrap(False)
+        self.custom_signal_path.setFixedWidth(300)
+        self.custom_signal_path.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.custom_signal_path.setAlignment(Qt.AlignCenter)
+        self.custom_signal_path.setStyleSheet("color: gray;")
+        self.custom_signal_layout.addWidget(self.custom_signal_path)
+
+        self.browse_button = QPushButton("Browse...")
+        self.browse_button.setFixedWidth(100)
+        self.browse_button.clicked.connect(self.select_csv_file)
+        self.custom_signal_layout.addWidget(self.browse_button)
+
+        self.custom_signal_container.setLayout(self.custom_signal_layout)
+        options_layout.addWidget(self.custom_signal_container)
+
+        # Initially hidden (since Template is the default)
+        self.custom_signal_container.setVisible(False)
+        self.full_signal_radio.toggled.connect(self.toggle_custom_signal_layout)
+
+        # ---------------------------
+        # Transmission Rate ComboBox
         # ---------------------------
         self.transmission_label = QLabel("Transmission Rate:")
         self.transmission_label.setAlignment(Qt.AlignCenter)
@@ -86,7 +118,7 @@ class SimulationOptionsWidget(QWidget):
         options_layout.addLayout(transmission_layout)
 
         # ---------------------------
-        # CheckBoxes for artifacts
+        # Artifacts Checkboxes
         # ---------------------------
         artifacts_label = QLabel("Artifacts:")
         artifacts_label.setAlignment(Qt.AlignCenter)
@@ -102,42 +134,17 @@ class SimulationOptionsWidget(QWidget):
         artifacts_layout.addWidget(self.muscle_checkbox)
         artifacts_layout.addWidget(self.random_movement_checkbox)
         artifacts_layout.addWidget(self.sixty_hz_checkbox)
-
         options_layout.addLayout(artifacts_layout)
 
-        # ---------------------------
-        # Custom Noise File (CSV)
-        # ---------------------------
-        custom_noise_layout = QVBoxLayout()
-        custom_noise_layout.setAlignment(Qt.AlignCenter)
-        self.custom_noise_file = None
-
-        self.custom_noise_label = QLabel("Custom Noise CSV:")
-        self.custom_noise_label.setAlignment(Qt.AlignCenter)
-        custom_noise_layout.addWidget(self.custom_noise_label)
-
-        self.custom_noise_path = QLabel("[None Selected]")
-        self.custom_noise_path.setWordWrap(False)
-        self.custom_noise_path.setFixedWidth(300)
-        self.custom_noise_path.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.custom_noise_path.setAlignment(Qt.AlignCenter)
-        self.custom_noise_path.setStyleSheet("color: gray;")
-
-        custom_noise_layout.addWidget(self.custom_noise_path)
-
-        self.browse_button = QPushButton("Browse...")
-        self.browse_button.setFixedWidth(100)
-        self.browse_button.clicked.connect(self.select_csv_file)
-        custom_noise_layout.addWidget(self.browse_button)
-
-        options_layout.addLayout(custom_noise_layout)
-
+        # Add the options layout to the main layout
         main_layout.addLayout(options_layout)
 
-        # Spacer below the buttons
+        # Spacer below
         main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        # Bottom layout for the Disconnect and Start buttons
+        # ---------------------------
+        # Bottom Buttons Layout
+        # ---------------------------
         bottom_layout = QHBoxLayout()
 
         self.disconnect_button = QPushButton("Disconnect")
@@ -145,7 +152,6 @@ class SimulationOptionsWidget(QWidget):
         self.disconnect_button.clicked.connect(self.device_controller.start_graceful_disconnect)
         bottom_layout.addWidget(self.disconnect_button)
 
-        # Spacer to push the Start button to the right
         bottom_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         self.start_button = QPushButton("Start")
@@ -155,6 +161,15 @@ class SimulationOptionsWidget(QWidget):
 
         main_layout.addLayout(bottom_layout)
         self.setLayout(main_layout)
+
+        self._update_start_button_state()
+
+    # ---------------------------
+    # Toggle the Custom Signal Container
+    # ---------------------------
+    def toggle_custom_signal_layout(self, checked: bool):
+        self.custom_signal_container.setVisible(checked)
+        self._update_start_button_state()
 
     # ---------------------------
     # File Dialog for Selecting a CSV
@@ -167,32 +182,58 @@ class SimulationOptionsWidget(QWidget):
             "CSV Files (*.csv)"
         )
         if file_name:
-            self.custom_noise_file = file_name
-            # Ellipsize
-            elided = self.elide_text(file_name, self.custom_noise_path.width())
-            self.custom_noise_path.setText(elided)
+            self.custom_signal_file = file_name
+            # Ellipsize long file paths
+            elided = self.elide_text(file_name, self.custom_signal_path.width())
+            self.custom_signal_path.setText(elided)
         else:
-            self.custom_noise_file = None
-            self.custom_noise_path.setText("[None Selected]")
+            self.custom_signal_file = None
+            self.custom_signal_path.setText("[None Selected]")
 
-    def elide_text(self, text, max_width):
+        self._update_start_button_state()
+
+    # ---------------------------
+    # Helper: Update "Start" Button State
+    # ---------------------------
+    def _update_start_button_state(self):
+        # Full Signal requires a CSV
+        full_signal_chosen = self.full_signal_radio.isChecked()
+        if full_signal_chosen and not self.custom_signal_file:
+            # No file selected yet
+            self.start_button.setEnabled(False)
+            self.start_button.setText("Select custom signal CSV file.")
+            self.start_button.setObjectName("greyButton")
+        else:
+            # Either Template mode or CSV is provided
+            self.start_button.setEnabled(True)
+            self.start_button.setText("Start")
+            self.start_button.setObjectName("greenButton")
+
+        self._update_button_style(self.start_button)
+
+    # ---------------------------
+    # Helper: Force Re-polish Button Style
+    # ---------------------------
+    def _update_button_style(self, button: QPushButton):
+        button.style().unpolish(button)
+        button.style().polish(button)
+        button.update()
+
+    # ---------------------------
+    # Helper: Ellide Text
+    # ---------------------------
+    def elide_text(self, text: str, max_width: int) -> str:
         """
         Returns an elided version of 'text' that does not exceed 'max_width' px,
         using middle-ellipsizing (e.g., "C:/some/.../file.csv").
         """
-        fm = QFontMetrics(self.custom_noise_path.font())
+        fm = QFontMetrics(self.custom_signal_path.font())
         return fm.elidedText(text, Qt.ElideMiddle, max_width)
 
     # ---------------------------
     # Start Simulation
     # ---------------------------
     def on_start_simulation(self):
-        """
-        Called when the user clicks "Start."
-        Gather radio button, transmission rate, artifacts checkboxes, and custom CSV file.
-        Pass them to the state machine/device controller, then start the simulation.
-        """
-
         selected_radio_id = self.radio_group.checkedId()
         if selected_radio_id == 0:
             simulation_type = SimulationType.TEMPLATE
@@ -208,15 +249,13 @@ class SimulationOptionsWidget(QWidget):
         random_movement = self.random_movement_checkbox.isChecked()
         sixty_hz = self.sixty_hz_checkbox.isChecked()
 
-        # Update the state machine with all selected options
         self.state_machine.update_simulation_options(
             simulation_type,
             transmission_rate,
             muscle_artifact=muscle,
             random_artifact=random_movement,
             sixty_hz_artifact=sixty_hz,
-            custom_csv=self.custom_noise_file
+            custom_csv=self.custom_signal_file
         )
 
-        # Finally start the simulation
         self.device_controller.start_simulation()
