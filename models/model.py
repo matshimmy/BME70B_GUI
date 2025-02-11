@@ -86,7 +86,7 @@ class Model(QObject):
         self.disconnect_trans_done = False
 
         # Acquisition
-        self.acquisition_type = None
+        self.get_template = None
         self.sampling_rate = None
         self.acquisition_running = False
 

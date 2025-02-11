@@ -1,12 +1,11 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
-    QSizePolicy, QLabel, QRadioButton, QComboBox, QButtonGroup
+    QSizePolicy, QLabel, QComboBox, QCheckBox
 )
 from PyQt5.QtCore import Qt
 
 from controllers.device_controller import DeviceController
 from controllers.state_machine import StateMachine
-from enums.acquisition_type import AcquisitionType
 
 class AcquisitionOptionsWidget(QWidget):
     def __init__(self, state_machine : StateMachine, device_controller: DeviceController):
@@ -40,29 +39,11 @@ class AcquisitionOptionsWidget(QWidget):
         options_layout.setAlignment(Qt.AlignCenter)
 
         # ---------------------------
-        # Radio Buttons for "Template" vs. "Full Signal"
+        # CheckBox for "Template"
         # ---------------------------
-        self.label = QLabel("Acquisition Type")
-        self.label.setAlignment(Qt.AlignCenter)
-        options_layout.addWidget(self.label)
-
-        radio_layout = QHBoxLayout()
-        radio_layout.setAlignment(Qt.AlignCenter)
-
-        self.template_radio = QRadioButton(AcquisitionType.TEMPLATE.value)
-        self.full_signal_radio = QRadioButton(AcquisitionType.FULL_SIGNAL.value)
-
-        self.template_radio.setChecked(True)
-
-        radio_layout.addWidget(self.template_radio)
-        radio_layout.addWidget(self.full_signal_radio)
-
-        options_layout.addLayout(radio_layout)
-
-        # QButtonGroup so we can see which button is checked more easily
-        self.radio_group = QButtonGroup()
-        self.radio_group.addButton(self.template_radio, 0)
-        self.radio_group.addButton(self.full_signal_radio, 1)
+        self.template_checkbox = QCheckBox("Calculate Template Plot")
+        self.template_checkbox.setChecked(True)
+        options_layout.addWidget(self.template_checkbox)
 
         # ---------------------------
         # Drop-down (ComboBox) for sampling rates
@@ -105,18 +86,12 @@ class AcquisitionOptionsWidget(QWidget):
         self.setLayout(main_layout)
 
     def on_start_acquisition(self):
-        selected_radio_id = self.radio_group.checkedId()
-        if selected_radio_id == 0:
-            acquisition_type = AcquisitionType.TEMPLATE
-        else:
-            acquisition_type = AcquisitionType.FULL_SIGNAL
-
         sampling_rate_str = self.combo_sampling.currentText()
 
         sampling_rate = float(sampling_rate_str.split()[0])
 
         # Update state machine
-        self.state_machine.update_acquisition_options(acquisition_type, sampling_rate)
+        self.state_machine.update_acquisition_options(self.template_checkbox.isChecked(), sampling_rate)
 
         # Finally start the acquisition
         self.device_controller.start_acquisition()
