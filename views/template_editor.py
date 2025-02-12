@@ -1,6 +1,7 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QApplication
 import pyqtgraph as pg
 import numpy as np
+from PyQt5.QtCore import Qt
 
 class TemplateEditor(QWidget):
     def __init__(self, parent=None):
@@ -22,12 +23,22 @@ class TemplateEditor(QWidget):
         self.template_plot.setXRange(0, 1)  # for now
         self.template_plot.setYRange(-1.5, 1.5)  # for now
         
+        # Add grid
+        self.template_plot.showGrid(x=True, y=True, alpha=0.3)
+        
         # Disable default mouse interactions
         self.template_plot.setMouseEnabled(x=False, y=False)
         self.template_plot.setMenuEnabled(False)
         
-        # Create scatter plot item for control points
-        self.scatter = pg.ScatterPlotItem(size=10, pen=pg.mkPen('b'), brush=pg.mkBrush('b'))
+        # Create scatter plot item for control points with hover effects
+        self.scatter = pg.ScatterPlotItem(
+            size=15,
+            pen=pg.mkPen('b', width=2),
+            brush=pg.mkBrush('w'),
+            hoverPen=pg.mkPen('r', width=5),
+            hoverBrush=pg.mkBrush('r'),
+            hoverable=True
+        )
         self.template_plot.addItem(self.scatter)
         
         # Create line plot for the curve
@@ -53,7 +64,7 @@ class TemplateEditor(QWidget):
         """Update the template visualization"""
         if len(self.points) < 2:
             return
-            
+
         # Sort points by x position
         self.points.sort(key=lambda p: p['pos'][0])
         
@@ -72,8 +83,15 @@ class TemplateEditor(QWidget):
     def _point_clicked(self, _, points):
         """Handle clicking on existing points"""
         if len(points) > 0:
-            self.dragging = True
-            self.current_point_index = points[0].index()
+            if QApplication.keyboardModifiers() == Qt.ControlModifier:
+                # Delete point if Ctrl+Click (except endpoints)
+                index = points[0].index()
+                if 0 < index < len(self.points) - 1:
+                    self.points.pop(index)
+                    self._update_template()
+            else:
+                self.dragging = True
+                self.current_point_index = points[0].index()
 
     def _plot_clicked(self, event):
         """Handle clicking on the plot to add new points"""
