@@ -42,7 +42,7 @@ class RunningSimulationWidget(QWidget):
 
         self._build_time_window_selector(main_layout)
 
-        self._build_template_placeholder(main_layout)
+        self._build_template(main_layout)
         self._build_bottom_controls(main_layout)
 
         self.setLayout(main_layout)
@@ -91,10 +91,7 @@ class RunningSimulationWidget(QWidget):
 
         parent_layout.addLayout(x_range_layout)
 
-    def _build_template_placeholder(self, parent_layout: QVBoxLayout):
-        """
-        Create the template editor widget that appears only if simulation_type == TEMPLATE.
-        """
+    def _build_template(self, parent_layout: QVBoxLayout):
         self.template_editor = TemplateEditor()
         parent_layout.addWidget(self.template_editor, stretch=1)
 

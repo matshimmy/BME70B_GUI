@@ -4,14 +4,14 @@ import numpy as np
 from PyQt5.QtCore import Qt
 
 class TemplateEditor(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self):
+        super().__init__()
         self.points = []
         self.dragging = False
         self.current_point_index = None
         self.plot_clicked_toggle = False
         self._build_ui()
-        self.initialize_template()
+        self.reset_template()
 
     def _build_ui(self):
         layout = QVBoxLayout()
@@ -53,7 +53,7 @@ class TemplateEditor(QWidget):
         layout.addWidget(self.template_plot)
         self.setLayout(layout)
 
-    def initialize_template(self):
+    def reset_template(self):
         """Initialize with a flat line"""
         self.points = [
             {'pos': (0, 0), 'data': 1},
@@ -88,6 +88,7 @@ class TemplateEditor(QWidget):
                 # Delete point if Ctrl+Shift+Click (except endpoints)
                 index = points[0].index()
                 if 0 < index < len(self.points) - 1:
+                    self.plot_clicked_toggle = True
                     self.points.pop(index)
                     self._update_template()
             elif QApplication.keyboardModifiers() == Qt.ControlModifier:
