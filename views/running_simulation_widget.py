@@ -68,7 +68,7 @@ class RunningSimulationWidget(QWidget):
         return layout
 
     def _build_signal_plot(self, parent_layout: QVBoxLayout):
-        self.signal_plot = pg.PlotWidget(title="Signal Transmission Plot")
+        self.signal_plot = pg.PlotWidget()
         self.signal_plot.setBackground('w')
         self.signal_plot.setLabel('left', 'Amplitude', units='A')
         self.signal_plot.setLabel('bottom', 'Time', units='s')

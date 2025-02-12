@@ -6,7 +6,8 @@ class TemplateEditor(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.points = []
-        self.current_point = None
+        self.dragging = False
+        self.current_point_index = None
         self._build_ui()
         self.initialize_template()
 
@@ -14,12 +15,16 @@ class TemplateEditor(QWidget):
         layout = QVBoxLayout()
         
         # Create template plot
-        self.template_plot = pg.PlotWidget(title="Template Editor")
+        self.template_plot = pg.PlotWidget()
         self.template_plot.setBackground('w')
         self.template_plot.setLabel('left', 'Amplitude', units='V')
         self.template_plot.setLabel('bottom', 'Time', units='s')
         self.template_plot.setXRange(0, 1)  # for now
         self.template_plot.setYRange(-1.5, 1.5)  # for now
+        
+        # Disable default mouse interactions
+        self.template_plot.setMouseEnabled(x=False, y=False)
+        self.template_plot.setMenuEnabled(False)
         
         # Create scatter plot item for control points
         self.scatter = pg.ScatterPlotItem(size=10, pen=pg.mkPen('b'), brush=pg.mkBrush('b'))
@@ -67,39 +72,43 @@ class TemplateEditor(QWidget):
     def _point_clicked(self, _, points):
         """Handle clicking on existing points"""
         if len(points) > 0:
-            self.current_point = points[0]
+            self.dragging = True
+            self.current_point_index = points[0].index()
 
     def _plot_clicked(self, event):
         """Handle clicking on the plot to add new points"""
-        if event.button() != 1:  # Left click only
+        # Only handle right clicks to add points
+        if event.button() != 2:
             return
-            
-        pos = self.template_plot.plotItem.vb.mapSceneToView(event.scenePos())
         
-        # Ensure x is within bounds
+        # click: stop dragging
+        if self.dragging:
+            self._stop_dragging()
+            return
+
+        pos = self.template_plot.plotItem.vb.mapSceneToView(event.scenePos())
         x = np.clip(pos.x(), 0, 1)
         y = pos.y()
         
-        # Add new point
         self.points.append({'pos': (x, y), 'data': len(self.points) + 1})
         self._update_template()
 
     def _mouse_moved(self, pos):
         """Handle dragging points"""
-        if self.current_point is None:
+        if not self.dragging:
             return
             
         pos = self.template_plot.plotItem.vb.mapSceneToView(pos)
         x = np.clip(pos.x(), 0, 1)
         y = pos.y()
         
-        # Update point position
-        for point in self.points:
-            if point['data'] == self.current_point.data():
-                point['pos'] = (x, y)
-                break
-                
+        self.points[self.current_point_index]['pos'] = (x, y)
         self._update_template()
+
+    def _stop_dragging(self):
+        """Reset dragging state"""
+        self.dragging = False
+        self.current_point_index = None
 
     def get_template_data(self):
         """Return the current template data for use in simulation"""
