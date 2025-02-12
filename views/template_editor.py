@@ -9,6 +9,7 @@ class TemplateEditor(QWidget):
         self.points = []
         self.dragging = False
         self.current_point_index = None
+        self.plot_clicked_toggle = False
         self._build_ui()
         self.initialize_template()
 
@@ -83,25 +84,27 @@ class TemplateEditor(QWidget):
     def _point_clicked(self, _, points):
         """Handle clicking on existing points"""
         if len(points) > 0:
-            if QApplication.keyboardModifiers() == Qt.ControlModifier:
-                # Delete point if Ctrl+Click (except endpoints)
+            if QApplication.keyboardModifiers() == (Qt.ControlModifier | Qt.ShiftModifier):
+                # Delete point if Ctrl+Shift+Click (except endpoints)
                 index = points[0].index()
                 if 0 < index < len(self.points) - 1:
                     self.points.pop(index)
                     self._update_template()
-            else:
+            elif QApplication.keyboardModifiers() == Qt.ControlModifier:
+                # drag point if Ctrl+Click
                 self.dragging = True
+                self.plot_clicked_toggle = True
                 self.current_point_index = points[0].index()
+            else:
+                self._stop_dragging()
 
     def _plot_clicked(self, event):
         """Handle clicking on the plot to add new points"""
-        # Only handle right clicks to add points
-        if event.button() != 2:
+        if event.button() != 1 or self.dragging:
             return
         
-        # click: stop dragging
-        if self.dragging:
-            self._stop_dragging()
+        if self.plot_clicked_toggle:
+            self.plot_clicked_toggle = False
             return
 
         pos = self.template_plot.plotItem.vb.mapSceneToView(event.scenePos())
