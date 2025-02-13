@@ -47,11 +47,10 @@ class AcquisitionService(QObject):
         self.current_index = 0
 
     def run_acquisition(self):
-        self.load_data()
-
-        # extract channel 1
-        self.signal = self.resampled_signals[:, 0]
-
+        # Initialize parameters for sine wave
+        self.new_fs = self.model.sampling_rate  # Sampling rate
+        frequency = 1.0  # 1 Hz sine wave
+        self.current_index = 0
         self._running = True
 
         # How many samples to emit at a time
@@ -66,18 +65,11 @@ class AcquisitionService(QObject):
                 self._running = False
                 break
 
-            start_idx = self.current_index
-            end_idx = self.current_index + chunk_size
-
-            if end_idx > self.signal.shape[0]:
-                # loop forever
-                end_idx = end_idx % self.signal.shape[0]
-                self.current_index = 0
-
-            # Extract this chunk
-            chunk = self.signal[start_idx:end_idx]
+            # Generate sine wave chunk
+            t = np.arange(self.current_index, self.current_index + chunk_size) / self.new_fs
+            chunk = np.sin(2 * np.pi * frequency * t)
+            
             self.current_index += chunk_size
-
             self.chunk_received.emit(chunk)
 
             time.sleep(chunk_size * sample_interval)
