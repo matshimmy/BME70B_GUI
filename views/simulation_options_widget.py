@@ -15,7 +15,9 @@ class SimulationOptionsWidget(QWidget):
         super().__init__()
         self.device_controller = device_controller
         self.state_machine = state_machine
-        self.template_model = state_machine.model.template_model  # Get reference to template model
+        self.template_model = state_machine.model.template_model
+        self.signal_simulation = state_machine.model.signal_simulation
+        self.model = state_machine.model
 
         # ---------------------------
         # Main Layout
@@ -258,6 +260,10 @@ class SimulationOptionsWidget(QWidget):
         # Transmission Rate (e.g., "100 Hz" -> 100)
         transmission_rate_str = self.combo_transmission.currentText()
         transmission_rate = int(transmission_rate_str.split()[0])
+        # Artifact checkboxes
+        muscle = self.muscle_checkbox.isChecked()
+        random_movement = self.random_movement_checkbox.isChecked()
+        sixty_hz = self.sixty_hz_checkbox.isChecked()
 
         selected_radio_id = self.radio_group.checkedId()
         if selected_radio_id == 0:
@@ -266,19 +272,9 @@ class SimulationOptionsWidget(QWidget):
             self.template_model.set_duration_ms(self.template_length_spinbox.value())
         else:
             simulation_type = SimulationType.FULL_SIGNAL
+            self.signal_simulation.load_csv_data(self.custom_signal_file)
+            self.signal_simulation.set_transmission_rate(transmission_rate)
+            self.signal_simulation.set_artifacts(muscle, random_movement, sixty_hz)
 
-        # Artifact checkboxes
-        muscle = self.muscle_checkbox.isChecked()
-        random_movement = self.random_movement_checkbox.isChecked()
-        sixty_hz = self.sixty_hz_checkbox.isChecked()
-
-        self.state_machine.update_simulation_options(
-            simulation_type,
-            transmission_rate,
-            muscle_artifact=muscle,
-            random_artifact=random_movement,
-            sixty_hz_artifact=sixty_hz,
-            custom_csv=self.custom_signal_file
-        )
-
+        self.model.set_simulation_type(simulation_type)
         self.device_controller.start_simulation()

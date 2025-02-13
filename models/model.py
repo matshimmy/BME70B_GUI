@@ -3,6 +3,8 @@ from models.signal_data import SignalData
 from models.template_processor import TemplateProcessor
 from models.template_model import TemplateModel
 from enums.connection_type import ConnectionType
+from models.signal_simulation_model import SignalSimulationModel
+from enums.simulation_type import SimulationType
 
 class Model(QObject):
     model_changed = pyqtSignal()
@@ -72,6 +74,10 @@ class Model(QObject):
         self.acquisition_running = True
         self.model_changed.emit()
 
+    def set_simulation_type(self, simulation_type: SimulationType):
+        self.simulation_type = simulation_type
+        self.model_changed.emit()
+
     def reset_model(self):
         self.signal_data = SignalData()
         self.template_processor = TemplateProcessor()
@@ -94,12 +100,8 @@ class Model(QObject):
 
         # Simulation
         self.template_model = TemplateModel()
-        self.simulation_type = None
-        self.transmission_rate = None
-        self.muscle_artifact = False
-        self.random_artifact = False
-        self.sixty_hz_artifact = False
-        self.custom_csv_path = None
+        self.signal_simulation = SignalSimulationModel()
+        self.simulation_type = SimulationType.TEMPLATE
 
         self.simulation_running = False
 
