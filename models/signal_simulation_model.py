@@ -47,6 +47,18 @@ class SignalSimulationModel(QObject):
         self._time_transferred_data = np.array([])
         self._current_transfer_index = 0
         self._simulation_timer.stop()
+        self._template_mode = False
+        self._template_data = None
+
+    def set_template_data(self, template_data: np.ndarray, template_duration: float):
+        self.reset()
+        self._template_mode = True
+        self._template_data = template_data
+        self._buffer_size = len(template_data)
+        
+        # Create time array for one template cycle
+        self._time_data = np.linspace(0, template_duration, len(template_data))
+        self._signal_data = template_data
 
     def _transfer_next_chunk(self):
         if len(self._signal_data) == 0:
@@ -54,21 +66,22 @@ class SignalSimulationModel(QObject):
 
         start_idx = self._current_transfer_index
         end_idx = start_idx + self._buffer_size
-        
-        # If we've reached the end, stop the simulation
-        if end_idx >= len(self._signal_data):
+
+        if end_idx >= len(self._signal_data) and not self._template_mode:
             self._simulation_timer.stop()
             return
         
-        # Normal case - add next chunk
-        self._current_transfer_index = end_idx
-        new_time = self._time_data[start_idx:end_idx]
-        new_signal = self._signal_data[start_idx:end_idx].copy()  # Make a copy to avoid modifying original
-        
+        if self._template_mode:
+            cycle_duration = self._time_data[-1] - self._time_data[0]
+            current_cycle = self._current_transfer_index // len(self._signal_data)
+            new_time = self._time_data + (cycle_duration * current_cycle)
+            new_signal = self._signal_data.copy()
+        else:
+            new_time = self._time_data[start_idx:end_idx]
+            new_signal = self._signal_data[start_idx:end_idx].copy()
+
         # Add artifacts to the new chunk
         chunk_size = len(new_signal)
-        
-        # Add each type of artifact
         new_signal += self._generate_muscle_artifact(chunk_size)
         new_signal += self._generate_random_movement_artifact(chunk_size)
         new_signal += self._generate_sixty_hz_artifact(new_time)
@@ -81,7 +94,7 @@ class SignalSimulationModel(QObject):
             self._signal_transferred_data = np.append(self._signal_transferred_data, new_signal)
             self._time_transferred_data = np.append(self._time_transferred_data, new_time)
 
-        # Emit signal that new data is ready
+        self._current_transfer_index += self._buffer_size
         self.simulation_chunk_ready.emit()
 
     def set_artifacts(self, muscle: bool, random_movement: bool, sixty_hz: bool):

@@ -18,6 +18,7 @@ class RunningSimulationWidget(QWidget):
         self.state_machine = state_machine
         self.model = state_machine.model
         self.signal_simulation = state_machine.model.signal_simulation
+        self.template_model = state_machine.model.template_model
 
         self.disconnecting = False
 
@@ -160,6 +161,10 @@ class RunningSimulationWidget(QWidget):
             self.back_button.setEnabled(False)
             if self.model.simulation_type == SimulationType.TEMPLATE:
                 self.template_editor.enable_editing(False)
+                template_data = self.template_model.get_template_data()
+                template_duration = self.template_model._duration
+                self.signal_simulation.set_template_data(template_data, template_duration)
+                
             self.signal_simulation.start_simulation()
         else:
             self.simulation_button.setText("Resume Simulation")
