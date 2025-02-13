@@ -1,6 +1,7 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from models.signal_data import SignalData
 from models.template_processor import TemplateProcessor
+from models.template_model import TemplateModel
 from enums.connection_type import ConnectionType
 
 class Model(QObject):
@@ -92,6 +93,7 @@ class Model(QObject):
         self.acquisition_running = False
 
         # Simulation
+        self.template_model = TemplateModel()
         self.simulation_type = None
         self.transmission_rate = None
         self.muscle_artifact = False

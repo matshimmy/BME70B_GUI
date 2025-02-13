@@ -92,7 +92,7 @@ class RunningSimulationWidget(QWidget):
         parent_layout.addLayout(x_range_layout)
 
     def _build_template(self, parent_layout: QVBoxLayout):
-        self.template_editor = TemplateEditor()
+        self.template_editor = TemplateEditor(self.model.template_model)
         parent_layout.addWidget(self.template_editor, stretch=1)
 
     def _build_bottom_controls(self, parent_layout: QVBoxLayout):
@@ -128,9 +128,6 @@ class RunningSimulationWidget(QWidget):
 
         # Simulation status
         self.simulation_status_label.setText("Signal")
-
-        # Template editor
-        self.template_editor.reset_template()
 
         # Simulation button
         self.simulation_button.setEnabled(True)

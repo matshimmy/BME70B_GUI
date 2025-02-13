@@ -3,15 +3,21 @@ import pyqtgraph as pg
 import numpy as np
 from PyQt5.QtCore import Qt
 
+from models.template_model import TemplateModel
+
 class TemplateEditor(QWidget):
-    def __init__(self):
+    def __init__(self, template_model: TemplateModel):
         super().__init__()
-        self.points = []
+        self.template_model = template_model
         self.dragging = False
         self.current_point_index = None
         self.plot_clicked_toggle = False
+        
+        # Connect to duration changes
+        self.template_model.duration_changed.connect(self._on_duration_changed)
+        
         self._build_ui()
-        self.reset_template()
+        self._update_template()  # Initial display
 
     def _build_ui(self):
         layout = QVBoxLayout()
@@ -20,9 +26,9 @@ class TemplateEditor(QWidget):
         self.template_plot = pg.PlotWidget()
         self.template_plot.setBackground('w')
         self.template_plot.setLabel('left', 'Amplitude', units='V')
-        self.template_plot.setLabel('bottom', 'Time', units='s')
-        self.template_plot.setXRange(0, 1)  # for now
-        self.template_plot.setYRange(-1.5, 1.5)  # for now
+        self.template_plot.setLabel('bottom', 'Time', units='ms')
+        self.template_plot.setXRange(0, self.template_model._duration_ms)
+        self.template_plot.setYRange(*self.template_model._y_range)
         
         # Add grid
         self.template_plot.showGrid(x=True, y=True, alpha=0.3)
@@ -53,33 +59,22 @@ class TemplateEditor(QWidget):
         layout.addWidget(self.template_plot)
         self.setLayout(layout)
 
-    def reset_template(self):
-        """Initialize with a flat line"""
-        self.points = [
-            {'pos': (0, 0), 'data': 1},
-            {'pos': (1, 0), 'data': 2}
-        ]
-        self._update_template()
-
     def _update_template(self):
-        """Update the template visualization"""
-        if len(self.points) < 2:
+        control_points = self.template_model.get_control_points()
+        if len(control_points) < 2:
             return
 
-        # Sort points by x position
-        self.points.sort(key=lambda p: p['pos'][0])
-        
-        # Extract x and y coordinates
-        x = np.array([p['pos'][0] for p in self.points])
-        y = np.array([p['pos'][1] for p in self.points])
+        # Extract x and y coordinates from control points
+        x = np.array([p[0] for p in control_points])
+        y = np.array([p[1] for p in control_points])
         
         # Update scatter plot
         self.scatter.setData(x=x, y=y)
         
-        # Create smooth curve using interpolation
-        smooth_x = np.linspace(0, 1, 200)
-        smooth_y = np.interp(smooth_x, x, y)
-        self.curve.setData(smooth_x, smooth_y)
+        # Update curve with raw template data
+        x_axis = self.template_model.get_x_axis()
+        template_data = self.template_model.get_template_data()
+        self.curve.setData(x_axis, template_data)
 
     def _point_clicked(self, _, points):
         """Handle clicking on existing points"""
@@ -87,10 +82,9 @@ class TemplateEditor(QWidget):
             if QApplication.keyboardModifiers() == (Qt.ControlModifier | Qt.ShiftModifier):
                 # Delete point if Ctrl+Shift+Click (except endpoints)
                 index = points[0].index()
-                if 0 < index < len(self.points) - 1:
-                    self.plot_clicked_toggle = True
-                    self.points.pop(index)
-                    self._update_template()
+                self.plot_clicked_toggle = True
+                self.template_model.remove_control_point(index)
+                self._update_template()
             elif QApplication.keyboardModifiers() == Qt.ControlModifier:
                 # drag point if Ctrl+Click
                 self.dragging = True
@@ -109,42 +103,30 @@ class TemplateEditor(QWidget):
             return
 
         pos = self.template_plot.plotItem.vb.mapSceneToView(event.scenePos())
-        x = np.clip(pos.x(), 0, 1)
-        y = np.clip(pos.y(), -1.5, 1.5)
+        x_ms = pos.x()
+        y = pos.y()
         
-        self.points.append({'pos': (x, y), 'data': len(self.points) + 1})
+        self.template_model.add_control_point(x_ms, y)
         self._update_template()
 
     def _mouse_moved(self, pos):
-        """Handle dragging points"""
-        if not self.dragging:
+        if not self.dragging or self.current_point_index is None:
             return
             
         pos = self.template_plot.plotItem.vb.mapSceneToView(pos)
-        x = np.clip(pos.x(), 0, 1)
-        y = np.clip(pos.y(), -1.5, 1.5)
+        x_ms = pos.x()
+        y = pos.y()
         
-        self.points[self.current_point_index]['pos'] = (x, y)
+        self.template_model.update_control_point(self.current_point_index, x_ms, y)
         self._update_template()
 
     def _stop_dragging(self):
-        """Reset dragging state"""
         self.dragging = False
         self.current_point_index = None
 
-    def get_template_data(self):
-        """Return the current template data for use in simulation"""
-        if len(self.points) < 2:
-            return np.zeros(200), np.zeros(200)
-            
-        x = np.array([p['pos'][0] for p in self.points])
-        y = np.array([p['pos'][1] for p in self.points])
-        
-        smooth_x = np.linspace(0, 1, 200)
-        smooth_y = np.interp(smooth_x, x, y)
-        
-        return smooth_x, smooth_y
-
     def enable_editing(self, enabled: bool):
-        """Enable or disable template editing"""
         self.template_plot.setEnabled(enabled)
+
+    def _on_duration_changed(self, duration_ms: float):
+        self.template_plot.setXRange(0, duration_ms)
+        self._update_template()

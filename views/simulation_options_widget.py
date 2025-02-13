@@ -15,6 +15,7 @@ class SimulationOptionsWidget(QWidget):
         super().__init__()
         self.device_controller = device_controller
         self.state_machine = state_machine
+        self.template_model = state_machine.model.template_model  # Get reference to template model
 
         # ---------------------------
         # Main Layout
@@ -111,7 +112,8 @@ class SimulationOptionsWidget(QWidget):
 
         self.template_length_spinbox = QSpinBox()
         self.template_length_spinbox.setRange(500, 1000)
-        self.template_length_spinbox.setValue(700)
+        self.template_length_spinbox.setValue(self.template_model._duration_ms)  # Set initial value from model
+        self.template_length_spinbox.valueChanged.connect(self.template_model.set_duration_ms)  # Connect to model
 
         template_length_layout.addWidget(self.template_length_label)
         template_length_layout.addWidget(self.template_length_spinbox)
@@ -126,7 +128,7 @@ class SimulationOptionsWidget(QWidget):
         self.transmission_label.setAlignment(Qt.AlignCenter)
 
         self.combo_transmission = QComboBox()
-        self.combo_transmission.addItems(["30 Hz", "100 Hz", "200 Hz", "500 Hz"])
+        self.combo_transmission.addItems(["10 Hz", "30 Hz", "100 Hz", "200 Hz", "500 Hz"])
         self.combo_transmission.setCurrentIndex(1)  # default "100 Hz"
 
         transmission_layout = QHBoxLayout()
@@ -253,15 +255,17 @@ class SimulationOptionsWidget(QWidget):
     # Start Simulation
     # ---------------------------
     def on_start_simulation(self):
-        selected_radio_id = self.radio_group.checkedId()
-        if selected_radio_id == 0:
-            simulation_type = SimulationType.TEMPLATE
-        else:
-            simulation_type = SimulationType.FULL_SIGNAL
-
         # Transmission Rate (e.g., "100 Hz" -> 100)
         transmission_rate_str = self.combo_transmission.currentText()
         transmission_rate = int(transmission_rate_str.split()[0])
+
+        selected_radio_id = self.radio_group.checkedId()
+        if selected_radio_id == 0:
+            simulation_type = SimulationType.TEMPLATE
+            self.template_model.set_transmission_rate(transmission_rate)
+            self.template_model.set_duration_ms(self.template_length_spinbox.value())
+        else:
+            simulation_type = SimulationType.FULL_SIGNAL
 
         # Artifact checkboxes
         muscle = self.muscle_checkbox.isChecked()
