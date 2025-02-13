@@ -26,8 +26,8 @@ class TemplateEditor(QWidget):
         self.template_plot = pg.PlotWidget()
         self.template_plot.setBackground('w')
         self.template_plot.setLabel('left', 'Amplitude', units='V')
-        self.template_plot.setLabel('bottom', 'Time', units='ms')
-        self.template_plot.setXRange(0, self.template_model._duration_ms)
+        self.template_plot.setLabel('bottom', 'Time', units='s')
+        self.template_plot.setXRange(0, self.template_model._duration)
         self.template_plot.setYRange(*self.template_model._y_range)
         
         # Add grid
@@ -103,10 +103,10 @@ class TemplateEditor(QWidget):
             return
 
         pos = self.template_plot.plotItem.vb.mapSceneToView(event.scenePos())
-        x_ms = pos.x()
+        x = pos.x()
         y = pos.y()
         
-        self.template_model.add_control_point(x_ms, y)
+        self.template_model.add_control_point(x, y)
         self._update_template()
 
     def _mouse_moved(self, pos):
@@ -114,10 +114,10 @@ class TemplateEditor(QWidget):
             return
             
         pos = self.template_plot.plotItem.vb.mapSceneToView(pos)
-        x_ms = pos.x()
+        x = pos.x()
         y = pos.y()
         
-        self.template_model.update_control_point(self.current_point_index, x_ms, y)
+        self.template_model.update_control_point(self.current_point_index, x, y)
         self._update_template()
 
     def _stop_dragging(self):
@@ -128,5 +128,5 @@ class TemplateEditor(QWidget):
         self.template_plot.setEnabled(enabled)
 
     def _on_duration_changed(self, duration_ms: float):
-        self.template_plot.setXRange(0, duration_ms)
+        self.template_plot.setXRange(0, duration_ms / 1000.0)
         self._update_template()

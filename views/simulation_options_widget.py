@@ -114,8 +114,8 @@ class SimulationOptionsWidget(QWidget):
 
         self.template_length_spinbox = QSpinBox()
         self.template_length_spinbox.setRange(500, 1000)
-        self.template_length_spinbox.setValue(self.template_model._duration_ms)  # Set initial value from model
-        self.template_length_spinbox.valueChanged.connect(self.template_model.set_duration_ms)  # Connect to model
+        self.template_length_spinbox.setValue(int(self.template_model._duration * 1000))
+        self.template_length_spinbox.valueChanged.connect(self.template_model.set_duration_ms)
 
         template_length_layout.addWidget(self.template_length_label)
         template_length_layout.addWidget(self.template_length_spinbox)

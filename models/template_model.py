@@ -6,20 +6,19 @@ class TemplateModel(QObject):
 
     def __init__(self):
         super().__init__()
-        self._duration_ms = 700  # Default 1 second in milliseconds
+        self._duration = 0.7  # Default duration in seconds
         self._transmission_rate = 200  # Default 200 Hz
         self._template_data = None
         self._x_axis = None
-        self._control_points = []  # List of (x, y) tuples for editor control points
-        self._y_range = (-1.5, 1.5)  # Default y-axis range
+        self._control_points = []
+        self._y_range = (-1.5, 1.5)
         self._update_x_axis()
         self._initialize_template()
 
     def _update_x_axis(self):
         num_points = self.get_num_points()
-        self._x_axis = np.linspace(0, self._duration_ms, num_points)
+        self._x_axis = np.linspace(0, self._duration, num_points)
         
-        # If template data exists, interpolate it to match new x-axis
         if self._template_data is not None:
             self._interpolate_template()
 
@@ -27,16 +26,16 @@ class TemplateModel(QObject):
         num_points = self.get_num_points()
         self._template_data = np.zeros(num_points)
         
-        # Initialize with two control points at the ends
+        # Initialize with two control points at the ends (in seconds)
         self._control_points = [
             (0, 0),          # Start point
-            (self._duration_ms, 0)  # End point
+            (self._duration, 0)  # End point
         ]
         self._update_template_from_control_points()
 
     def _interpolate_template(self):
         if self._template_data is not None:
-            old_x = np.linspace(0, self._duration_ms, len(self._template_data))
+            old_x = np.linspace(0, self._duration, len(self._template_data))
             self._template_data = np.interp(self._x_axis, old_x, self._template_data)
 
     def _update_template_from_control_points(self):
@@ -45,24 +44,23 @@ class TemplateModel(QObject):
             y = np.array([p[1] for p in self._control_points])
             
             # Interpolate control points to x-axis
-            smooth_x = self._x_axis
-            smooth_y = np.interp(smooth_x, x, y)
+            smooth_y = np.interp(self._x_axis, x, y)
             self._template_data = smooth_y
 
-    def add_control_point(self, x_ms: float, y: float):
-        x_ms = np.clip(x_ms, 0, self._duration_ms)
+    def add_control_point(self, x: float, y: float):
+        x = np.clip(x, 0, self._duration)
         y = np.clip(y, self._y_range[0], self._y_range[1])
         
-        self._control_points.append((x_ms, y))
+        self._control_points.append((x, y))
         self._sort_control_points()
         self._update_template_from_control_points()
 
-    def update_control_point(self, index: int, x_ms: float, y: float):
+    def update_control_point(self, index: int, x: float, y: float):
         if 0 <= index < len(self._control_points):
-            x_ms = np.clip(x_ms, 0, self._duration_ms)
+            x = np.clip(x, 0, self._duration)
             y = np.clip(y, self._y_range[0], self._y_range[1])
             
-            self._control_points[index] = (x_ms, y)
+            self._control_points[index] = (x, y)
             self._sort_control_points()
             self._update_template_from_control_points()
 
@@ -76,7 +74,7 @@ class TemplateModel(QObject):
 
     # Getters and setters
     def get_num_points(self):
-        return int((self._duration_ms / 1000) * self._transmission_rate)
+        return int(self._duration * self._transmission_rate)
 
     def get_x_axis(self):
         return self._x_axis
@@ -88,7 +86,7 @@ class TemplateModel(QObject):
         return self._control_points.copy()
 
     def set_duration_ms(self, duration_ms: float):
-        self._duration_ms = duration_ms
+        self._duration = round(duration_ms / 1000.0, 3)  # Convert to seconds with 3 decimal places
         self._update_x_axis()
         self._initialize_template()
         self.duration_changed.emit(duration_ms)
