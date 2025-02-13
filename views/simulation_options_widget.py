@@ -149,7 +149,7 @@ class SimulationOptionsWidget(QWidget):
         artifacts_layout = QVBoxLayout()
         artifacts_layout.setAlignment(Qt.AlignCenter)
 
-        self.muscle_checkbox = QCheckBox("Muscle")
+        self.muscle_checkbox = QCheckBox("Muscle EMG")
         self.random_movement_checkbox = QCheckBox("Random Movement")
         self.sixty_hz_checkbox = QCheckBox("60 Hz Grid")
 
@@ -265,6 +265,7 @@ class SimulationOptionsWidget(QWidget):
         random_movement = self.random_movement_checkbox.isChecked()
         sixty_hz = self.sixty_hz_checkbox.isChecked()
 
+        self.signal_simulation.set_artifacts(muscle, random_movement, sixty_hz)
         selected_radio_id = self.radio_group.checkedId()
         if selected_radio_id == 0:
             simulation_type = SimulationType.TEMPLATE
@@ -274,7 +275,6 @@ class SimulationOptionsWidget(QWidget):
         else:
             simulation_type = SimulationType.FULL_SIGNAL
             self.signal_simulation.load_csv_data(self.custom_signal_file, transmission_rate)
-            self.signal_simulation.set_artifacts(muscle, random_movement, sixty_hz)
 
         self.model.set_simulation_type(simulation_type)
         self.device_controller.start_simulation()

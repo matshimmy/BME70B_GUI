@@ -21,12 +21,12 @@ class SignalSimulationModel(QObject):
         
         # Artifact parameters
         self._muscle_artifact = False
-        self._random_artifact = False
+        self._random_movement_artifact = False
         self._sixty_hz_artifact = False
         
         # Artifact generation parameters
         self._muscle_amplitude = 0.2
-        self._random_amplitude = 0.1
+        self._random_movement_amplitude = 0.1
         self._sixty_hz_amplitude = 0.15
         
         self.reset()
@@ -63,8 +63,17 @@ class SignalSimulationModel(QObject):
         # Normal case - add next chunk
         self._current_transfer_index = end_idx
         new_time = self._time_data[start_idx:end_idx]
-        new_signal = self._signal_data[start_idx:end_idx]
+        new_signal = self._signal_data[start_idx:end_idx].copy()  # Make a copy to avoid modifying original
         
+        # Add artifacts to the new chunk
+        chunk_size = len(new_signal)
+        
+        # Add each type of artifact
+        new_signal += self._generate_muscle_artifact(chunk_size)
+        new_signal += self._generate_random_movement_artifact(chunk_size)
+        new_signal += self._generate_sixty_hz_artifact(new_time)
+        
+        # Store the data with artifacts
         if len(self._signal_transferred_data) == 0:
             self._signal_transferred_data = new_signal
             self._time_transferred_data = new_time
@@ -75,35 +84,50 @@ class SignalSimulationModel(QObject):
         # Emit signal that new data is ready
         self.simulation_chunk_ready.emit()
 
-    def set_artifacts(self, muscle: bool, random: bool, sixty_hz: bool):
+    def set_artifacts(self, muscle: bool, random_movement: bool, sixty_hz: bool):
         self._muscle_artifact = muscle
-        self._random_artifact = random
+        self._random_movement_artifact = random_movement
         self._sixty_hz_artifact = sixty_hz
 
     def _generate_muscle_artifact(self, num_points: int) -> np.ndarray:
         if not self._muscle_artifact:
             return np.zeros(num_points)
         
-        # Simulate muscle artifact as filtered noise
+        # Generate high-frequency noise (EMG-like)
         noise = np.random.normal(0, 1, num_points)
-        # Apply simple moving average as a basic low-pass filter
+        # Apply bandpass-like filtering using moving average
         window_size = 5
         filtered_noise = np.convolve(noise, np.ones(window_size)/window_size, mode='same')
-        return filtered_noise * self._muscle_amplitude
+        # Add some random amplitude modulation to make it more realistic
+        envelope = np.abs(np.random.normal(0, 1, num_points))
+        envelope = np.convolve(envelope, np.ones(20)/20, mode='same')  # Smooth the envelope
+        return filtered_noise * envelope * self._muscle_amplitude
 
-    def _generate_random_artifact(self, num_points: int) -> np.ndarray:
-        if not self._random_artifact:
+    def _generate_random_movement_artifact(self, num_points: int) -> np.ndarray:
+        if not self._random_movement_artifact:
             return np.zeros(num_points)
         
-        return np.random.normal(0, self._random_amplitude, num_points)
+        # Only generate movement artifact occasionally (10% chance per chunk)
+        if np.random.random() > 0.1:
+            return np.zeros(num_points)
+        
+        # Generate a smooth, random baseline wander
+        movement = np.zeros(num_points)
+        # Random direction and amplitude
+        amplitude = np.random.normal(0, self._random_movement_amplitude)
+        # Create smooth transition using half a sine wave
+        duration = min(num_points, int(self._transmission_rate * 0.5))  # ~0.5 second movement
+        movement[:duration] = amplitude * np.sin(np.linspace(0, np.pi, duration))
+        return movement
 
     def _generate_sixty_hz_artifact(self, time_points: np.ndarray) -> np.ndarray:
         if not self._sixty_hz_artifact:
             return np.zeros_like(time_points)
-        
+
         return self._sixty_hz_amplitude * np.sin(2 * np.pi * 60 * time_points)
     
     def load_csv_data(self, file_path: str, transmission_rate: int):
+        self.reset()
         self._transmission_rate = transmission_rate
         data = pd.read_csv(file_path)
         self._time_data = data['Time_s'].values
