@@ -270,6 +270,7 @@ class SimulationOptionsWidget(QWidget):
             simulation_type = SimulationType.TEMPLATE
             self.template_model.set_transmission_rate(transmission_rate)
             self.template_model.set_duration_ms(self.template_length_spinbox.value())
+            self.signal_simulation.reset()
         else:
             simulation_type = SimulationType.FULL_SIGNAL
             self.signal_simulation.load_csv_data(self.custom_signal_file, transmission_rate)

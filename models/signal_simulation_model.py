@@ -1,12 +1,23 @@
 import numpy as np
 import pandas as pd
+from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 
-class SignalSimulationModel():
+class SignalSimulationModel(QObject):
+    simulation_chunk_ready = pyqtSignal()  # Signal when new data is ready
+
     def __init__(self):
+        super().__init__()
         self._transmission_rate = 100  # Hz
         self._buffer_size = 100  # points
         self._time_data = np.array([])
         self._signal_data = np.array([])
+        self._signal_transferred_data = np.array([])
+        self._time_transferred_data = np.array([])
+        self._current_transfer_index = 0
+        
+        # Simulation timer
+        self._simulation_timer = QTimer()
+        self._simulation_timer.timeout.connect(self._transfer_next_chunk)
         
         # Artifact parameters
         self._muscle_artifact = False
@@ -20,10 +31,49 @@ class SignalSimulationModel():
         
         self.reset()
 
+    def start_simulation(self):
+        # Calculate timer interval based on buffer size and transmission rate
+        interval_ms = int((self._buffer_size / self._transmission_rate) * 1000)
+        self._simulation_timer.setInterval(interval_ms)
+        self._simulation_timer.start()
+
+    def pause_simulation(self):
+        self._simulation_timer.stop()
+
     def reset(self):
         self._time_data = np.zeros(self._buffer_size)
         self._signal_data = np.zeros(self._buffer_size)
-        self._current_index = 0
+        self._signal_transferred_data = np.array([])
+        self._time_transferred_data = np.array([])
+        self._current_transfer_index = 0
+        self._simulation_timer.stop()
+
+    def _transfer_next_chunk(self):
+        if len(self._signal_data) == 0:
+            return
+
+        start_idx = self._current_transfer_index
+        end_idx = start_idx + self._buffer_size
+        
+        # If we've reached the end, stop the simulation
+        if end_idx >= len(self._signal_data):
+            self._simulation_timer.stop()
+            return
+        
+        # Normal case - add next chunk
+        self._current_transfer_index = end_idx
+        new_time = self._time_data[start_idx:end_idx]
+        new_signal = self._signal_data[start_idx:end_idx]
+        
+        if len(self._signal_transferred_data) == 0:
+            self._signal_transferred_data = new_signal
+            self._time_transferred_data = new_time
+        else:
+            self._signal_transferred_data = np.append(self._signal_transferred_data, new_signal)
+            self._time_transferred_data = np.append(self._time_transferred_data, new_time)
+
+        # Emit signal that new data is ready
+        self.simulation_chunk_ready.emit()
 
     def set_artifacts(self, muscle: bool, random: bool, sixty_hz: bool):
         self._muscle_artifact = muscle

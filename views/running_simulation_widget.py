@@ -21,6 +21,9 @@ class RunningSimulationWidget(QWidget):
 
         self.disconnecting = False
 
+        # Connect to simulation model's signal
+        self.signal_simulation.simulation_chunk_ready.connect(self.update_graph)
+
         self._build_ui()
         self.reset_ui()
 
@@ -157,6 +160,7 @@ class RunningSimulationWidget(QWidget):
             self.back_button.setEnabled(False)
             if self.model.simulation_type == SimulationType.TEMPLATE:
                 self.template_editor.enable_editing(False)
+            self.signal_simulation.start_simulation()
         else:
             self.simulation_button.setText("Resume Simulation")
             self.simulation_status_label.setText("Signal")
@@ -164,17 +168,33 @@ class RunningSimulationWidget(QWidget):
             self.back_button.setEnabled(True)
             if self.model.simulation_type == SimulationType.TEMPLATE:
                 self.template_editor.enable_editing(True)
+            self.signal_simulation.pause_simulation()
 
         self._update_button_style(self.simulation_button)
 
     def update_graph(self):
-        t_visible = np.linspace(0, 10, 100, endpoint=False)
+        # Get the transferred data from signal simulation
+        time_data = self.signal_simulation._time_transferred_data
+        signal_data = self.signal_simulation._signal_transferred_data
+        # Update the plot with all transferred data
+        self.curve.setData(time_data, signal_data)
+
+        # Update x-axis range
         time_window = self.x_range_spinbox.value()
-        current_time = t_visible[-1] if len(t_visible) else 0
+        current_time = time_data[-1] if len(time_data) > 0 else 0
         if current_time < time_window:
             self.signal_plot.setXRange(0, time_window)
         else:
             self.signal_plot.setXRange(current_time - time_window, current_time)
+
+        # Auto-scale y-axis
+        visible_start = max(0, len(signal_data) - int(time_window * self.signal_simulation._transmission_rate))
+        visible_data = signal_data[visible_start:]
+        if len(visible_data) > 0:
+            y_min = np.min(visible_data)
+            y_max = np.max(visible_data)
+            margin = 0.05 * (y_max - y_min)
+            self.signal_plot.setYRange(y_min - margin, y_max + margin)
 
     # -------------------------------------------------------------------------
     #  Disconnect Logic
