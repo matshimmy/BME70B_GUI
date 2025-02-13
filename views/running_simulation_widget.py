@@ -8,16 +8,16 @@ import numpy as np
 
 from controllers.device_controller import DeviceController
 from controllers.state_machine import StateMachine
-from models.model import Model
 from enums.simulation_type import SimulationType
 from views.template_editor import TemplateEditor
 
 class RunningSimulationWidget(QWidget):
-    def __init__(self, model: Model, state_machine: StateMachine, device_controller: DeviceController):
+    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
         super().__init__()
         self.device_controller = device_controller
         self.state_machine = state_machine
-        self.model = model
+        self.model = state_machine.model
+        self.signal_simulation = state_machine.model.signal_simulation
 
         self.disconnecting = False
 

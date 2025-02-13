@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.acquisition_options_screen = AcquisitionOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_acquisition_screen = RunningAcquisitionWidget(model=self.state_machine.model, state_machine=self.state_machine, device_controller=self.device_controller)
         self.simulation_options_screen = SimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
-        self.running_simulation_screen = RunningSimulationWidget(model=self.state_machine.model, state_machine=self.state_machine, device_controller=self.device_controller)
+        self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.stimulation_options_screen = StimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_stimulation_screen = RunningStimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.graceful_disconnect_screen = GracefulDisconnectWidget(model=self.state_machine.model, device_controller=self.device_controller)

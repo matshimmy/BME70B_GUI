@@ -4,7 +4,7 @@ import pandas as pd
 class SignalSimulationModel():
     def __init__(self):
         self._transmission_rate = 100  # Hz
-        self._buffer_size = 10000  # points
+        self._buffer_size = 100  # points
         self._time_data = np.array([])
         self._signal_data = np.array([])
         
@@ -24,10 +24,6 @@ class SignalSimulationModel():
         self._time_data = np.zeros(self._buffer_size)
         self._signal_data = np.zeros(self._buffer_size)
         self._current_index = 0
-
-    def set_transmission_rate(self, rate: float):
-        self._transmission_rate = rate
-        self.reset()
 
     def set_artifacts(self, muscle: bool, random: bool, sixty_hz: bool):
         self._muscle_artifact = muscle
@@ -57,7 +53,24 @@ class SignalSimulationModel():
         
         return self._sixty_hz_amplitude * np.sin(2 * np.pi * 60 * time_points)
     
-    def load_csv_data(self, file_path: str):
+    def load_csv_data(self, file_path: str, transmission_rate: int):
+        self._transmission_rate = transmission_rate
         data = pd.read_csv(file_path)
         self._time_data = data['Time_s'].values
         self._signal_data = data['Signal'].values
+
+        self._resample_signal(self._time_data, self._signal_data)
+
+    def _resample_signal(self, time_data: np.ndarray, signal_data: np.ndarray):
+        # Calculate original sampling rate
+        original_sampling_rate = 1 / np.mean(np.diff(time_data))
+        
+        # Calculate number of points needed for new sampling rate
+        num_points = int(len(time_data) * (self._transmission_rate / original_sampling_rate))
+        
+        # Create new time array with desired transmission rate
+        new_time_data = np.linspace(time_data[0], time_data[-1], num_points)
+        
+        # Interpolate signal to new sampling rate
+        self._signal_data = np.interp(new_time_data, time_data, signal_data)
+        self._time_data = new_time_data

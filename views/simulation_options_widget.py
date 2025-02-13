@@ -272,8 +272,7 @@ class SimulationOptionsWidget(QWidget):
             self.template_model.set_duration_ms(self.template_length_spinbox.value())
         else:
             simulation_type = SimulationType.FULL_SIGNAL
-            self.signal_simulation.load_csv_data(self.custom_signal_file)
-            self.signal_simulation.set_transmission_rate(transmission_rate)
+            self.signal_simulation.load_csv_data(self.custom_signal_file, transmission_rate)
             self.signal_simulation.set_artifacts(muscle, random_movement, sixty_hz)
 
         self.model.set_simulation_type(simulation_type)
