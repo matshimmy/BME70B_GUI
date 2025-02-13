@@ -110,7 +110,7 @@ class TemplateEditor(QWidget):
 
         pos = self.template_plot.plotItem.vb.mapSceneToView(event.scenePos())
         x = np.clip(pos.x(), 0, 1)
-        y = pos.y()
+        y = np.clip(pos.y(), -1.5, 1.5)
         
         self.points.append({'pos': (x, y), 'data': len(self.points) + 1})
         self._update_template()
@@ -122,7 +122,7 @@ class TemplateEditor(QWidget):
             
         pos = self.template_plot.plotItem.vb.mapSceneToView(pos)
         x = np.clip(pos.x(), 0, 1)
-        y = pos.y()
+        y = np.clip(pos.y(), -1.5, 1.5)
         
         self.points[self.current_point_index]['pos'] = (x, y)
         self._update_template()

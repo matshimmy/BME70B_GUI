@@ -96,8 +96,8 @@ class MainWindow(QMainWindow):
             self.stacked_widget.setCurrentIndex(4)
         elif new_state == AppState.SIMULATION_OPTIONS:
             self.stacked_widget.setCurrentIndex(5)
-            self.running_simulation_screen.reset_ui()
         elif new_state == AppState.RUNNING_SIMULATION:
+            self.running_simulation_screen.reset_ui()
             self.stacked_widget.setCurrentIndex(6)
         elif new_state == AppState.STIMULATION_OPTIONS:
             self.stacked_widget.setCurrentIndex(7)

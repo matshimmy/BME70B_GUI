@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
     QSizePolicy, QLabel, QRadioButton, QComboBox, QButtonGroup,
-    QCheckBox, QFileDialog
+    QCheckBox, QFileDialog, QSpinBox
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFontMetrics
@@ -99,8 +99,26 @@ class SimulationOptionsWidget(QWidget):
 
         # Initially hidden (since Template is the default)
         self.custom_signal_container.setVisible(False)
-        self.full_signal_radio.toggled.connect(self.toggle_custom_signal_layout)
+        self.full_signal_radio.toggled.connect(self.toggle_radio_layout)
 
+        # ---------------------------
+        # Template Length Spin Box
+        # ---------------------------
+        self.template_length_container = QWidget()
+        template_length_layout = QHBoxLayout()
+        self.template_length_label = QLabel("Template Length (ms):")
+        self.template_length_label.setAlignment(Qt.AlignCenter)
+
+        self.template_length_spinbox = QSpinBox()
+        self.template_length_spinbox.setRange(500, 1000)
+        self.template_length_spinbox.setValue(700)
+
+        template_length_layout.addWidget(self.template_length_label)
+        template_length_layout.addWidget(self.template_length_spinbox)
+        self.template_length_container.setLayout(template_length_layout)
+        options_layout.addWidget(self.template_length_container)
+
+        self.template_length_container.setVisible(True)
         # ---------------------------
         # Transmission Rate ComboBox
         # ---------------------------
@@ -167,8 +185,9 @@ class SimulationOptionsWidget(QWidget):
     # ---------------------------
     # Toggle the Custom Signal Container
     # ---------------------------
-    def toggle_custom_signal_layout(self, checked: bool):
+    def toggle_radio_layout(self, checked: bool):
         self.custom_signal_container.setVisible(checked)
+        self.template_length_container.setVisible(not checked)
         self._update_start_button_state()
 
     # ---------------------------

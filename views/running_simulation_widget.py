@@ -129,6 +129,9 @@ class RunningSimulationWidget(QWidget):
         # Simulation status
         self.simulation_status_label.setText("Signal")
 
+        # Template editor
+        self.template_editor.reset_template()
+
         # Simulation button
         self.simulation_button.setEnabled(True)
         self.simulation_button.setText("Start Simulation")
