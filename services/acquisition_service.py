@@ -2,6 +2,7 @@ import time
 import os
 import numpy as np
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
+import serial
 
 import wfdb
 from scipy.signal import resample
@@ -15,63 +16,55 @@ class AcquisitionService(QObject):
     def __init__(self, model: Model):
         super().__init__()
         self.model = model
-
-        # Internal flags and buffers
         self._running = False
-        self.resampled_signals = None
-        self.new_fs = None
-        self.current_index = 0
+        self.chunk_buffer = []
+        
+        # Arduino setup
+        self.arduino = serial.Serial(port='COM3', baudrate=9600)
 
-    def load_data(self, record_name=os.path.join('services', '426')):
-        signals, fields = wfdb.rdsamp(record_name)
-        original_fs = fields['fs']
+    def send_command(self, command):
+        self.arduino.write((command + "\n").encode())
+        while self.arduino.in_waiting:
+            response = self.arduino.readline().decode().strip()
+            print("Arduino:", response)
+            return response
 
-        desired_fs = self.model.sampling_rate
-
-        if not np.isclose(desired_fs, original_fs):
-            # Number of original samples
-            num_orig_samples = signals.shape[0]
-            # Duration in seconds of the entire signal
-            duration_sec = num_orig_samples / original_fs
-            # Number of new samples to match desired_fs
-            num_new_samples = int(np.round(duration_sec * desired_fs))
-            # This resamples the entire multi-channel array along axis=0.
-            signals = resample(signals, num_new_samples, axis=0)
-
-            self.new_fs = desired_fs
-        else:
-            # No resampling needed
-            self.new_fs = original_fs
-
-        self.resampled_signals = signals
-        self.current_index = 0
+    def load_data(self):
+        # Configure Arduino
+        sampFreq = str(self.model.sampling_rate)
+        response = self.send_command(f"SET SAMPLE {sampFreq}")
+        # Wait for acknowledgment that contains "Sampling freq"
+        
+        response = self.send_command("SET FREQ 1")
+        # Wait for acknowledgment that contains "Signal freq"
+        
+        response = self.send_command("START")
+        # Wait for "Streaming started" message
 
     def run_acquisition(self):
-        # Initialize parameters for sine wave
-        self.new_fs = self.model.sampling_rate  # Sampling rate
-        frequency = 1.0  # 1 Hz sine wave
-        self.current_index = 0
+        self.load_data()
         self._running = True
-
-        # How many samples to emit at a time
         chunk_size = 30
 
-        # The time interval for each sample at the new sampling rate
-        sample_interval = 1.0 / self.new_fs
-
         while self._running:
-            # Check if the parent thread requested interruption
             if QThread.currentThread().isInterruptionRequested():
                 self._running = False
                 break
 
-            # Generate sine wave chunk
-            t = np.arange(self.current_index, self.current_index + chunk_size) / self.new_fs
-            chunk = np.sin(2 * np.pi * frequency * t)
-            
-            self.current_index += chunk_size
-            self.chunk_received.emit(chunk)
+            if self.arduino.in_waiting:
+                try:
+                    data = float(self.arduino.readline().decode().strip())
+                    self.chunk_buffer.append(data)
+                    
+                    # When we have enough data, emit the chunk
+                    if len(self.chunk_buffer) >= chunk_size:
+                        chunk = np.array(self.chunk_buffer[:chunk_size])
+                        self.chunk_received.emit(chunk)
+                        # Keep any remaining data
+                        self.chunk_buffer = self.chunk_buffer[chunk_size:]
+                except ValueError:
+                    print("Received invalid data from Arduino")
 
-            time.sleep(chunk_size * sample_interval)
-
+        # Clean up
+        self.arduino.close()
         self.finished.emit()
