@@ -37,16 +37,16 @@ class MainWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
 
         # Create screen widgets
-        self.idle_screen = IdleWidget(device_controller=self.device_controller)
-        self.system_check_screen = SystemCheckWidget(model=self.state_machine.model, device_controller=self.device_controller)
+        self.idle_screen = IdleWidget(state_machine=self.state_machine, device_controller=self.device_controller)
+        self.system_check_screen = SystemCheckWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.mode_selection_screen = ModeSelectionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.acquisition_options_screen = AcquisitionOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
-        self.running_acquisition_screen = RunningAcquisitionWidget(model=self.state_machine.model, state_machine=self.state_machine, device_controller=self.device_controller)
+        self.running_acquisition_screen = RunningAcquisitionWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.simulation_options_screen = SimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_simulation_screen = RunningSimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.stimulation_options_screen = StimulationOptionsWidget(state_machine=self.state_machine, device_controller=self.device_controller)
         self.running_stimulation_screen = RunningStimulationWidget(state_machine=self.state_machine, device_controller=self.device_controller)
-        self.graceful_disconnect_screen = GracefulDisconnectWidget(model=self.state_machine.model, device_controller=self.device_controller)
+        self.graceful_disconnect_screen = GracefulDisconnectWidget(state_machine=self.state_machine, device_controller=self.device_controller)
 
         # Add them to the stacked widget
         self.stacked_widget.addWidget(self.idle_screen)         # index 0 (IDLE)
@@ -73,12 +73,12 @@ class MainWindow(QMainWindow):
         # self.state_machine.transition_to(AppState.ACQUISITION_OPTIONS)
 
         # DEBUG: set state and model for running simulation development
-        from enums.connection_type import ConnectionType
-        self.state_machine.model.connection_type = ConnectionType.USB
-        self.state_machine.model.is_connected = True
-        self.state_machine.model.power_level = 100
-        self.state_machine.model.transmission_ok = True
-        self.state_machine.transition_to(AppState.SIMULATION_OPTIONS)
+        # from enums.connection_type import ConnectionType
+        # self.state_machine.model.connection_type = ConnectionType.USB
+        # self.state_machine.model.is_connected = True
+        # self.state_machine.model.power_level = 100
+        # self.state_machine.model.transmission_ok = True
+        # self.state_machine.transition_to(AppState.SIMULATION_OPTIONS)
 
 
     def on_state_changed(self, new_state):

@@ -5,21 +5,22 @@ from PyQt5.QtCore import Qt, QSize
 
 import qtawesome as qta
 
-from models.model import Model
 from controllers.device_controller import DeviceController
+from controllers.state_machine import StateMachine
 
 class SystemCheckWidget(QWidget):
-    def __init__(self, model : Model, device_controller : DeviceController):
+    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
         super().__init__()
         self.device_controller = device_controller
-        self.model = model
+        self.state_machine = state_machine
+        self.model = state_machine.model
         # Whenever the model changes, call self.update_ui
         self.model.model_changed.connect(self.update_ui)
 
         # Green check icon (reusable)
         self.green_check_icon = qta.icon('mdi.check-bold', color='#34b233')
 
-        # For each row, we’ll store a separate spinner + spin animation
+        # For each row, we'll store a separate spinner + spin animation
         # so they can spin independently.
         self.spin_anim_conn = None
         self.spin_icon_conn = None

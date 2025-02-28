@@ -2,12 +2,14 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
 
 from controllers.device_controller import DeviceController
+from controllers.state_machine import StateMachine
 from enums.connection_type import ConnectionType
 
 class IdleWidget(QWidget):
-    def __init__(self, device_controller : DeviceController):
+    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
         super().__init__()
 
+        self.state_machine = state_machine
         self.device_controller = device_controller
 
         layout = QVBoxLayout()
@@ -29,5 +31,5 @@ class IdleWidget(QWidget):
 
         self.setLayout(layout)
 
-    def handle_connect_mcu(self, connection_type : ConnectionType):
+    def handle_connect_mcu(self, connection_type: ConnectionType):
         self.device_controller.start_system_check(connection_type)

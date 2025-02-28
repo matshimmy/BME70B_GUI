@@ -4,14 +4,15 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, QSize
 
-from models.model import Model
 from controllers.device_controller import DeviceController
+from controllers.state_machine import StateMachine
 
 class GracefulDisconnectWidget(QWidget):
-    def __init__(self, model: Model, device_controller: DeviceController):
+    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
         super().__init__()
         self.device_controller = device_controller
-        self.model = model
+        self.state_machine = state_machine
+        self.model = state_machine.model
 
         # Connect to model_changed so we can update check marks/spinners
         self.model.model_changed.connect(self.update_ui)
