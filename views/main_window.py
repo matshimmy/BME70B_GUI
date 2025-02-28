@@ -3,16 +3,16 @@ from enums.app_state import AppState
 from controllers.state_machine import StateMachine
 from controllers.device_controller import DeviceController
 
-from views.idle_widget import IdleWidget
-from views.system_check_widget import SystemCheckWidget
-from views.mode_selection_widget import ModeSelectionWidget
-from views.acquisition_options_widget import AcquisitionOptionsWidget
-from views.running_acquisition_widget import RunningAcquisitionWidget
-from views.simulation_options_widget import SimulationOptionsWidget
-from views.running_simulation_widget import RunningSimulationWidget
-from views.stimulation_options_widget import StimulationOptionsWidget
-from views.running_stimulation_widget import RunningStimulationWidget
-from views.graceful_disconnect_widget import GracefulDisconnectWidget
+from views.idle.idle_widget import IdleWidget
+from views.system_check.system_check_widget import SystemCheckWidget
+from views.mode_selection.mode_selection_widget import ModeSelectionWidget
+from views.acquisition.acquisition_options_widget import AcquisitionOptionsWidget
+from views.acquisition.running_acquisition_widget import RunningAcquisitionWidget
+from views.simulation.simulation_options_widget import SimulationOptionsWidget
+from views.simulation.running_simulation_widget import RunningSimulationWidget
+from views.stimulation.stimulation_options_widget import StimulationOptionsWidget
+from views.stimulation.running_stimulation_widget import RunningStimulationWidget
+from views.disconnect.graceful_disconnect_widget import GracefulDisconnectWidget
 
 windowTitlePrefix = "BME70B App | "
 
