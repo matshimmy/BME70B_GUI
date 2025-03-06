@@ -5,7 +5,7 @@ from services.connection_interface import ConnectionInterface
 class USBConnection(ConnectionInterface):
     """USB/Serial connection implementation"""
     
-    def __init__(self, port='COM3', baudrate=9600):
+    def __init__(self, port='COM4', baudrate=9600):
         self.port = port
         self.baudrate = baudrate
         self.arduino = None
@@ -37,14 +37,15 @@ class USBConnection(ConnectionInterface):
         """Send a command to the Arduino and return the response"""
         if not self.is_connected():
             return "ERROR: Not connected"
-        
         try:
             self.arduino.write((command + "\n").encode())
             # Wait for response with timeout
             time.sleep(0.1)
             response = ""
             while self.arduino.in_waiting:
+                print(1)
                 response += self.arduino.readline().decode().strip()
+            print("try")
             return response
         except Exception as e:
             print(f"Command error: {e}")
@@ -65,4 +66,6 @@ class USBConnection(ConnectionInterface):
     def test_transmission(self):
         """Test data transmission with the device"""
         response = self.send_command("TEST TRANSMISSION")
-        return "OK" in response 
+        print("response: ", response)
+        return "OK" in response
+    

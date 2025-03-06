@@ -72,6 +72,7 @@ class SystemCheckService(QObject):
             
         print("Testing transmission...")
         transmission_ok = self.connection.test_transmission()
+        # print(transmission_ok)
         if self.model:
             self.model.transmission_ok = transmission_ok
         self.transmission_checked.emit(transmission_ok)
