@@ -14,7 +14,7 @@ class DeviceController:
         # System Check Thread & Service
         # ----------------------------------------------------------------
         self.systemCheckThread = QThread()
-        self.systemCheckService = SystemCheckService()
+        self.systemCheckService = SystemCheckService(self.state_machine.model)
 
         # Move the systemCheckService to the systemCheckThread
         self.systemCheckService.moveToThread(self.systemCheckThread)
@@ -27,6 +27,7 @@ class DeviceController:
         self.systemCheckService.power_checked.connect(self.handle_power_checked)
         self.systemCheckService.transmission_checked.connect(self.handle_transmission_checked)
         self.systemCheckService.finished.connect(self.handle_system_check_done)
+        self.systemCheckService.error.connect(self.handle_system_check_error)
 
         self.system_check_running = False
 
@@ -70,36 +71,61 @@ class DeviceController:
     # --------------------------------------------------------------------------
     # SYSTEM CHECK TASK
     # --------------------------------------------------------------------------
-    def start_system_check(self, connection_type : ConnectionType):
+    def start_system_check(self, connection_type: ConnectionType):
+        """Start the system check with the specified connection type"""
+        # Set the connection type for the system check
+        self.systemCheckService.set_connection_type(connection_type)
+        
+        # Connect the device in the state machine
         self.state_machine.connect_device(connection_type)
-
-        if not self.system_check_running:
-            self.system_check_running = True
+        
+        # Start the system check thread if it's not running
+        if not self.systemCheckThread.isRunning():
             self.systemCheckThread.start()
 
     def abort_system_check(self):
-        if self.system_check_running:
+        """Abort the system check"""
+        if self.systemCheckThread.isRunning():
+            # Request interruption
             self.systemCheckThread.requestInterruption()
-            self.state_machine.disconnect_device()
+            # Abort the system check service
+            self.systemCheckService.abort()
+            # Wait for the thread to finish
             self.systemCheckThread.quit()
             self.systemCheckThread.wait()
-            self.system_check_running = False
+            # Return to idle state
+            self.state_machine.disconnect_device()
 
-    # Handlers for system check signals
     def handle_connect_checked(self):
+        """Handle when connection check is complete"""
         self.state_machine.do_system_check_connection()
 
-    def handle_power_checked(self):
+    def handle_power_checked(self, power_level: int):
+        """Handle when power check is complete"""
+        # Update the model with the power level
         self.state_machine.do_system_check_power()
 
-    def handle_transmission_checked(self):
+    def handle_transmission_checked(self, transmission_ok: bool):
+        """Handle when transmission check is complete"""
+        # Update the model with the transmission status
         self.state_machine.do_system_test_transmission()
 
     def handle_system_check_done(self):
-        self.system_check_running = False
+        """Handle when the system check is complete"""
+        # Clean up the thread
         self.systemCheckThread.quit()
         self.systemCheckThread.wait()
+        # Update the state machine
         self.state_machine.do_system_check_done()
+
+    def handle_system_check_error(self, error_message: str):
+        """Handle system check errors"""
+        print(f"System check error: {error_message}")
+        # Clean up the thread
+        self.systemCheckThread.quit()
+        self.systemCheckThread.wait()
+        # Return to idle state
+        self.state_machine.disconnect_device()
 
     # --------------------------------------------------------------------------
     # GRACEFUL DISCONNECT TASK
