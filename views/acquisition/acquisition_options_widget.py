@@ -1,18 +1,13 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
+    QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
     QSizePolicy, QLabel, QComboBox, QCheckBox
 )
 from PyQt5.QtCore import Qt
 
-from controllers.device_controller import DeviceController
-from controllers.state_machine import StateMachine
+from views.common.base_widget import BaseWidget
 
-class AcquisitionOptionsWidget(QWidget):
-    def __init__(self, state_machine : StateMachine, device_controller: DeviceController):
-        super().__init__()
-        self.device_controller = device_controller
-        self.state_machine = state_machine
-
+class AcquisitionOptionsWidget(BaseWidget):
+    def _setup_ui(self):
         # Main vertical layout
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
@@ -95,3 +90,6 @@ class AcquisitionOptionsWidget(QWidget):
 
         # Finally start the acquisition
         self.device_controller.start_acquisition()
+
+    def reset_ui(self):
+        pass

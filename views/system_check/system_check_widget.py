@@ -4,16 +4,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QSize
 
 import qtawesome as qta
+from views.common.base_widget import BaseWidget
 
-from controllers.device_controller import DeviceController
-from controllers.state_machine import StateMachine
-
-class SystemCheckWidget(QWidget):
-    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
-        super().__init__()
-        self.device_controller = device_controller
-        self.state_machine = state_machine
-        self.model = state_machine.model
+class SystemCheckWidget(BaseWidget):
+    def _setup_ui(self):
         # Whenever the model changes, call self.update_ui
         self.model.model_changed.connect(self.update_ui)
 
@@ -105,36 +99,7 @@ class SystemCheckWidget(QWidget):
 
         self.setLayout(outer_layout)
 
-        # Initialize spinner icons for each row
-        self.reset_spinners()
-
-    def reset_spinners(self):
-        # 1) Connection spinner
-        self.spin_anim_conn = qta.Spin(self.spinner_connection, autostart=True)
-        self.spin_icon_conn = qta.icon(
-            'mdi.loading', color='#90D5FF', animation=self.spin_anim_conn
-        )
-        self.spinner_connection.setIcon(self.spin_icon_conn)
-        self.label_connection.setText("Connection")
-
-        # 2) Power spinner
-        self.spin_anim_power = qta.Spin(self.spinner_power, autostart=True)
-        self.spin_icon_power = qta.icon(
-            'mdi.loading', color='#90D5FF', animation=self.spin_anim_power
-        )
-        self.spinner_power.setIcon(self.spin_icon_power)
-        self.label_power.setText("Power Level")
-
-        # 3) Transmission spinner
-        self.spin_anim_trans = qta.Spin(self.spinner_transmission, autostart=True)
-        self.spin_icon_trans = qta.icon(
-            'mdi.loading', color='#90D5FF', animation=self.spin_anim_trans
-        )
-        self.spinner_transmission.setIcon(self.spin_icon_trans)
-        self.label_transmission.setText("Transmission Testing")
-
-        # Top label can also revert
-        self.top_label.setText("System Check in progress...")
+        self.reset_ui()
 
     def update_ui(self):
         # ---------------------------
@@ -170,3 +135,34 @@ class SystemCheckWidget(QWidget):
         else:
             self.label_transmission.setText("Transmission: NOT TESTED")
             self.spinner_transmission.setIcon(self.spin_icon_trans)
+
+    def reset_ui(self):
+        self.reset_spinners()
+        self.label_connection.setText("Connection")
+        self.label_power.setText("Power Level")
+        self.label_transmission.setText("Transmission Testing")
+        self.top_label.setText("System Check in progress...")
+
+
+    def reset_spinners(self):
+        # 1) Connection spinner
+        self.spin_anim_conn = qta.Spin(self.spinner_connection, autostart=True)
+        self.spin_icon_conn = qta.icon(
+            'mdi.loading', color='#90D5FF', animation=self.spin_anim_conn
+        )
+        self.spinner_connection.setIcon(self.spin_icon_conn)
+
+        # 2) Power spinner
+        self.spin_anim_power = qta.Spin(self.spinner_power, autostart=True)
+        self.spin_icon_power = qta.icon(
+            'mdi.loading', color='#90D5FF', animation=self.spin_anim_power
+        )
+        self.spinner_power.setIcon(self.spin_icon_power)
+
+        # 3) Transmission spinner
+        self.spin_anim_trans = qta.Spin(self.spinner_transmission, autostart=True)
+        self.spin_icon_trans = qta.icon(
+            'mdi.loading', color='#90D5FF', animation=self.spin_anim_trans
+        )
+        self.spinner_transmission.setIcon(self.spin_icon_trans)
+

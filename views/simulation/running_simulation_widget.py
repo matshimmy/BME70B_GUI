@@ -1,57 +1,44 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
+    QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
     QSizePolicy, QLabel, QSpinBox
 )
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
 
-from controllers.device_controller import DeviceController
-from controllers.state_machine import StateMachine
 from enums.simulation_type import SimulationType
 from views.simulation.template_editor import TemplateEditor
+from views.common.base_widget import BaseWidget
 
-class RunningSimulationWidget(QWidget):
-    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
-        super().__init__()
-        self.device_controller = device_controller
-        self.state_machine = state_machine
-        self.model = state_machine.model
-        self.signal_simulation = state_machine.model.signal_simulation
-        self.template_model = state_machine.model.template_model
+class RunningSimulationWidget(BaseWidget):
+    def _setup_ui(self):
+        self.signal_simulation = self.state_machine.model.signal_simulation
+        self.template_model = self.state_machine.model.template_model
 
         self.disconnecting = False
 
         # Connect to simulation model's signal
         self.signal_simulation.simulation_chunk_ready.connect(self.update_graph)
 
-        self._build_ui()
+        main_layout = QVBoxLayout()
+        main_layout.setAlignment(Qt.AlignCenter)
+
+        top_row_layout = self._setup_top_row()
+        main_layout.addLayout(top_row_layout)
+
+        self._setup_signal_plot(main_layout)
+        self._setup_time_window_selector(main_layout)
+        self._setup_template(main_layout)
+        self._setup_bottom_controls(main_layout)
+
+        self.setLayout(main_layout)
         self.reset_ui()
 
         # Listen for changes to the model
         self.model.model_changed.connect(self.on_model_changed)
 
-    # -------------------------------------------------------------------------
-    #  Build UI
-    # -------------------------------------------------------------------------
-    def _build_ui(self):
-        """Build and organize all UI components."""
-        main_layout = QVBoxLayout()
-        main_layout.setAlignment(Qt.AlignCenter)
 
-        top_row_layout = self._build_top_row()
-        main_layout.addLayout(top_row_layout)
-
-        self._build_signal_plot(main_layout)
-
-        self._build_time_window_selector(main_layout)
-
-        self._build_template(main_layout)
-        self._build_bottom_controls(main_layout)
-
-        self.setLayout(main_layout)
-
-    def _build_top_row(self) -> QHBoxLayout:
+    def _setup_top_row(self) -> QHBoxLayout:
         layout = QHBoxLayout()
 
         # Back button
@@ -71,7 +58,7 @@ class RunningSimulationWidget(QWidget):
 
         return layout
 
-    def _build_signal_plot(self, parent_layout: QVBoxLayout):
+    def _setup_signal_plot(self, parent_layout: QVBoxLayout):
         self.signal_plot = pg.PlotWidget()
         self.signal_plot.setBackground('w')
         self.signal_plot.setLabel('left', 'Amplitude', units='A')
@@ -80,7 +67,7 @@ class RunningSimulationWidget(QWidget):
 
         parent_layout.addWidget(self.signal_plot, stretch=1)
 
-    def _build_time_window_selector(self, parent_layout: QVBoxLayout):
+    def _setup_time_window_selector(self, parent_layout: QVBoxLayout):
         x_range_layout = QHBoxLayout()
         self.x_range_label = QLabel("Time window (s):")
         x_range_layout.addWidget(self.x_range_label)
@@ -95,11 +82,11 @@ class RunningSimulationWidget(QWidget):
 
         parent_layout.addLayout(x_range_layout)
 
-    def _build_template(self, parent_layout: QVBoxLayout):
+    def _setup_template(self, parent_layout: QVBoxLayout):
         self.template_editor = TemplateEditor(self.model.template_model)
         parent_layout.addWidget(self.template_editor, stretch=1)
 
-    def _build_bottom_controls(self, parent_layout: QVBoxLayout):
+    def _setup_bottom_controls(self, parent_layout: QVBoxLayout):
         bottom_layout = QHBoxLayout()
         self.disconnect_button = QPushButton("Disconnect")
         self.disconnect_button.setObjectName("redButton")

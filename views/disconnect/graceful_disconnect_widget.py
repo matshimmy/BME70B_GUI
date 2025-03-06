@@ -1,19 +1,11 @@
 import qtawesome as qta
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QSpacerItem, QSizePolicy
-)
+from PyQt5.QtWidgets import QVBoxLayout, QLabel, QHBoxLayout, QPushButton, QSpacerItem, QSizePolicy
 from PyQt5.QtCore import Qt, QSize
 
-from controllers.device_controller import DeviceController
-from controllers.state_machine import StateMachine
+from views.common.base_widget import BaseWidget
 
-class GracefulDisconnectWidget(QWidget):
-    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
-        super().__init__()
-        self.device_controller = device_controller
-        self.state_machine = state_machine
-        self.model = state_machine.model
-
+class GracefulDisconnectWidget(BaseWidget):
+    def _setup_ui(self):
         # Connect to model_changed so we can update check marks/spinners
         self.model.model_changed.connect(self.update_ui)
 
@@ -23,10 +15,8 @@ class GracefulDisconnectWidget(QWidget):
         # We'll keep references to the spinner animations so we can revert if needed
         self.spin_anim_conn = None
         self.spin_icon_conn = None
-
         self.spin_anim_power = None
         self.spin_icon_power = None
-
         self.spin_anim_trans = None
         self.spin_icon_trans = None
 
@@ -101,36 +91,7 @@ class GracefulDisconnectWidget(QWidget):
         outer_layout.addLayout(bottom_layout)
         self.setLayout(outer_layout)
 
-        # Initialize spinners
-        self.reset_spinners()
-
-    def reset_spinners(self):
-        # Connection
-        self.spin_anim_conn = qta.Spin(self.spinner_connection, autostart=True)
-        self.spin_icon_conn = qta.icon(
-            'mdi.loading', color='#90D5FF', animation=self.spin_anim_conn
-        )
-        self.spinner_connection.setIcon(self.spin_icon_conn)
-        self.label_connection.setText("Ending Connection")
-
-        # Power
-        self.spin_anim_power = qta.Spin(self.spinner_power, autostart=True)
-        self.spin_icon_power = qta.icon(
-            'mdi.loading', color='#90D5FF', animation=self.spin_anim_power
-        )
-        self.spinner_power.setIcon(self.spin_icon_power)
-        self.label_power.setText("Shutting Off Power")
-
-        # Transmission
-        self.spin_anim_trans = qta.Spin(self.spinner_transmission, autostart=True)
-        self.spin_icon_trans = qta.icon(
-            'mdi.loading', color='#90D5FF', animation=self.spin_anim_trans
-        )
-        self.spinner_transmission.setIcon(self.spin_icon_trans)
-        self.label_transmission.setText("Ending Transmission")
-
-        # Top label
-        self.top_label.setText("Graceful Disconnect in progress...")
+        self.reset_ui()
 
     def update_ui(self):
         # If the Worker updates these fields in the Model, we can do:
@@ -157,3 +118,32 @@ class GracefulDisconnectWidget(QWidget):
         else:
             self.spinner_transmission.setIcon(self.spin_icon_trans)
             self.label_transmission.setText("Ending Transmission")
+
+    def reset_ui(self):
+        self.reset_spinners()
+        self.label_connection.setText("Ending Connection")
+        self.label_power.setText("Shutting Off Power")
+        self.label_transmission.setText("Ending Transmission")
+        self.top_label.setText("Graceful Disconnect in progress...")
+
+    def reset_spinners(self):
+        # Connection
+        self.spin_anim_conn = qta.Spin(self.spinner_connection, autostart=True)
+        self.spin_icon_conn = qta.icon(
+            'mdi.loading', color='#90D5FF', animation=self.spin_anim_conn
+        )
+        self.spinner_connection.setIcon(self.spin_icon_conn)
+
+        # Power
+        self.spin_anim_power = qta.Spin(self.spinner_power, autostart=True)
+        self.spin_icon_power = qta.icon(
+            'mdi.loading', color='#90D5FF', animation=self.spin_anim_power
+        )
+        self.spinner_power.setIcon(self.spin_icon_power)
+
+        # Transmission
+        self.spin_anim_trans = qta.Spin(self.spinner_transmission, autostart=True)
+        self.spin_icon_trans = qta.icon(
+            'mdi.loading', color='#90D5FF', animation=self.spin_anim_trans
+        )
+        self.spinner_transmission.setIcon(self.spin_icon_trans)

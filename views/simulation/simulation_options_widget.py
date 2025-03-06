@@ -6,18 +6,13 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFontMetrics
 
-from controllers.device_controller import DeviceController
-from controllers.state_machine import StateMachine
+from views.common.base_widget import BaseWidget
 from enums.simulation_type import SimulationType
 
-class SimulationOptionsWidget(QWidget):
-    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
-        super().__init__()
-        self.device_controller = device_controller
-        self.state_machine = state_machine
-        self.template_model = state_machine.model.template_model
-        self.signal_simulation = state_machine.model.signal_simulation
-        self.model = state_machine.model
+class SimulationOptionsWidget(BaseWidget):
+    def _setup_ui(self):
+        self.template_model = self.state_machine.model.template_model
+        self.signal_simulation = self.state_machine.model.signal_simulation
 
         # ---------------------------
         # Main Layout
@@ -278,3 +273,6 @@ class SimulationOptionsWidget(QWidget):
 
         self.model.set_simulation_type(simulation_type)
         self.device_controller.start_simulation()
+
+    def reset_ui(self):
+        pass

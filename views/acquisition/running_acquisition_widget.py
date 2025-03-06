@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
+    QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
     QSizePolicy, QLabel, QFileDialog, QSpinBox, QDoubleSpinBox,
     QRadioButton, QButtonGroup
 )
@@ -7,47 +7,32 @@ from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
 
-from controllers.device_controller import DeviceController
-from controllers.state_machine import StateMachine
+from views.common.base_widget import BaseWidget
 
 
-class RunningAcquisitionWidget(QWidget):
-    def __init__(self, state_machine: StateMachine, device_controller: DeviceController):
-        super().__init__()
-        self.device_controller = device_controller
-        self.state_machine = state_machine
-        self.model = state_machine.model
+class RunningAcquisitionWidget(BaseWidget):
+    def _setup_ui(self):
 
         self.disconnecting = False
 
-        self._build_ui()
-        self._connect_signals()
-        self.reset_ui()
-
-    # -------------------------------------------------------------------------
-    #  Build UI
-    # -------------------------------------------------------------------------
-    def _build_ui(self):
-        """Build and organize all UI components."""
         main_layout = QVBoxLayout()
         main_layout.setAlignment(Qt.AlignCenter)
 
-        top_row_layout = self._build_top_row()
+        top_row_layout = self._setup_top_row()
         main_layout.addLayout(top_row_layout)
 
-        self._build_main_plot(main_layout)
-
-        self._build_time_window_selector(main_layout)
-
-        self._build_template_plot(main_layout)
-
-        self._build_template_controls(main_layout)
-
-        self._build_bottom_controls(main_layout)
-
+        self._setup_main_plot(main_layout)
+        self._setup_time_window_selector(main_layout)
+        self._setup_template_plot(main_layout)
+        self._setup_template_controls(main_layout)
+        self._setup_bottom_controls(main_layout)
         self.setLayout(main_layout)
 
-    def _build_top_row(self) -> QHBoxLayout:
+        self._connect_signals()
+        self.reset_ui()
+
+
+    def _setup_top_row(self) -> QHBoxLayout:
         layout = QHBoxLayout()
 
         # Back button
@@ -83,7 +68,7 @@ class RunningAcquisitionWidget(QWidget):
 
         return layout
 
-    def _build_main_plot(self, parent_layout: QVBoxLayout):
+    def _setup_main_plot(self, parent_layout: QVBoxLayout):
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.setBackground('w')
         self.plot_widget.setLabel('left', 'Amplitude', units='A')
@@ -91,7 +76,7 @@ class RunningAcquisitionWidget(QWidget):
         self.curve = self.plot_widget.plot([], [], pen='b')
         parent_layout.addWidget(self.plot_widget, stretch=1)
 
-    def _build_time_window_selector(self, parent_layout: QVBoxLayout):
+    def _setup_time_window_selector(self, parent_layout: QVBoxLayout):
         x_range_layout = QHBoxLayout()
         self.x_range_label = QLabel("Time window (s):")
         x_range_layout.addWidget(self.x_range_label)
@@ -111,7 +96,7 @@ class RunningAcquisitionWidget(QWidget):
 
         parent_layout.addLayout(x_range_layout)
 
-    def _build_template_plot(self, parent_layout: QVBoxLayout):
+    def _setup_template_plot(self, parent_layout: QVBoxLayout):
         layout = QHBoxLayout()
         layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.template_label = QLabel("Template")
@@ -129,7 +114,7 @@ class RunningAcquisitionWidget(QWidget):
         # Add widget to parent layout
         parent_layout.addWidget(self.template_plot_widget, stretch=1)
 
-    def _build_template_controls(self, parent_layout: QVBoxLayout):
+    def _setup_template_controls(self, parent_layout: QVBoxLayout):
         controls_layout = QHBoxLayout()
 
         # -- look_back_time_s
@@ -163,7 +148,7 @@ class RunningAcquisitionWidget(QWidget):
 
         parent_layout.addLayout(controls_layout)
 
-    def _build_bottom_controls(self, parent_layout: QVBoxLayout):
+    def _setup_bottom_controls(self, parent_layout: QVBoxLayout):
         """Add the bottom row with 'Disconnect' and 'Save Data' buttons."""
         bottom_layout = QHBoxLayout()
         self.disconnect_button = QPushButton("Disconnect")
@@ -364,7 +349,7 @@ class RunningAcquisitionWidget(QWidget):
 
     def _update_template_plot(self, template: np.ndarray):
         if len(template) > 0:
-            # Build time axis for template
+            # setup time axis for template
             sample_rate = self.model.template_processor.sample_rate
             x_axis = np.linspace(0, len(template)/sample_rate, len(template))
 

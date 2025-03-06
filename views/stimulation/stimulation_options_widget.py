@@ -1,17 +1,13 @@
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
+    QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
     QSizePolicy, QLabel, QComboBox
 )
 from PyQt5.QtCore import Qt
 
-from controllers.device_controller import DeviceController
-from controllers.state_machine import StateMachine
+from views.common.base_widget import BaseWidget
 
-class StimulationOptionsWidget(QWidget):
-    def __init__(self, state_machine : StateMachine, device_controller: DeviceController):
-        super().__init__()
-        self.device_controller = device_controller
-        self.state_machine = state_machine
+class StimulationOptionsWidget(BaseWidget):
+    def _setup_ui(self):
 
         # Main vertical layout
         main_layout = QVBoxLayout()
@@ -137,3 +133,6 @@ class StimulationOptionsWidget(QWidget):
 
         # Finally start the stimulation
         self.device_controller.start_stimulation()
+
+    def reset_ui(self):
+        pass
