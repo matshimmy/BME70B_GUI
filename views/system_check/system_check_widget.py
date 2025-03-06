@@ -94,18 +94,18 @@ class SystemCheckWidget(BaseWidget):
         middle_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         # Bottom layout for the Abort Button
-        bottom_layout = QHBoxLayout()
-        bottom_layout.setAlignment(Qt.AlignLeft)
+        self.bottom_layout = QHBoxLayout()
+        self.bottom_layout.setAlignment(Qt.AlignLeft)
 
         self.abort_button = QPushButton("Abort")
         self.abort_button.setObjectName("amberButton")  # Style defined in stylesheet
         self.abort_button.clicked.connect(self.device_controller.abort_system_check)
-        bottom_layout.addWidget(self.abort_button)
+        self.bottom_layout.addWidget(self.abort_button)
 
         # Outer layout to combine middle content and bottom button
         outer_layout = QVBoxLayout()
         outer_layout.addLayout(middle_layout)
-        outer_layout.addLayout(bottom_layout)
+        outer_layout.addLayout(self.bottom_layout)
 
         self.setLayout(outer_layout)
 
@@ -174,4 +174,84 @@ class SystemCheckWidget(BaseWidget):
             'mdi.loading', color='#90D5FF', animation=self.spin_anim_trans
         )
         self.spinner_transmission.setIcon(self.spin_icon_trans)
+
+    def connect_signals(self):
+        """Connect signals from the device controller"""
+        if not self.device_controller:
+            return
+        
+        # Listen for system check completion signals
+        self.device_controller.systemCheckService.connection_checked.connect(self.handle_connection_checked)
+        self.device_controller.systemCheckService.power_checked.connect(self.handle_power_checked)
+        self.device_controller.systemCheckService.transmission_checked.connect(self.handle_transmission_checked)
+        self.device_controller.systemCheckService.error.connect(self.handle_system_check_error)
+        
+    def handle_connection_checked(self):
+        """Handle when connection check completes"""
+        # Stop the connection spinner and show check mark
+        if self.spin_anim_conn:
+            self.spin_anim_conn.stop()
+        
+        # Set icon to check mark
+        self.spinner_connection.setIcon(qta.icon('fa5s.check', color='green'))
+        
+    def handle_power_checked(self, power_level):
+        """Handle when power check completes"""
+        # Stop the power spinner and show check mark
+        if self.spin_anim_power:
+            self.spin_anim_power.stop()
+        
+        # Set icon to check mark
+        self.spinner_power.setIcon(qta.icon('fa5s.check', color='green'))
+        
+        # Update the power level display with the actual value
+        power_text = f"{power_level}%" if power_level > 0 else self.DEFAULT_POWER_UNKNOWN
+        # Use the correct label for power value
+        self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {power_text}")
+        
+    def handle_transmission_checked(self, transmission_ok):
+        """Handle when transmission check completes"""
+        # Stop the transmission spinner
+        if self.spin_anim_trans:
+            self.spin_anim_trans.stop()
+        
+        status_text = self.DEFAULT_TRANSMISSION_OK if transmission_ok else "FAILED"
+        
+        if transmission_ok:
+            # Set icon to check mark if transmission was OK
+            self.spinner_transmission.setIcon(qta.icon('fa5s.check', color='green'))
+        else:
+            # Set icon to X mark if transmission failed
+            self.spinner_transmission.setIcon(qta.icon('fa5s.times', color='red'))
+        
+        # Use the correct label for transmission status
+        self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {status_text}")
+        
+    def handle_system_check_error(self, error_message):
+        """Handle system check errors"""
+        # Stop all spinners
+        self.reset_spinners()
+        
+        # Update the top label with the error
+        self.top_label.setText(f"Error: {error_message}")
+        
+        # Add a back button to return to idle
+        if not hasattr(self, 'back_button') or not self.back_button:
+            self.back_button = QPushButton("Back")
+            self.back_button.setObjectName("blueButton")
+            self.back_button.clicked.connect(self.handle_back_clicked)
+            self.bottom_layout.addWidget(self.back_button)
+        
+    def handle_back_clicked(self):
+        """Handle back button click"""
+        # Reset the UI
+        self.reset_ui()
+        
+        # Return to idle state
+        self.device_controller.abort_system_check()
+
+    def set_device_controller(self, device_controller):
+        """Set the device controller and connect signals"""
+        self.device_controller = device_controller
+        self.connect_signals()
 
