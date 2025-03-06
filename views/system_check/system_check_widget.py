@@ -7,6 +7,16 @@ import qtawesome as qta
 from views.common.base_widget import BaseWidget
 
 class SystemCheckWidget(BaseWidget):
+    # Default label strings
+    DEFAULT_TOP_LABEL = "System Check in progress..."
+    DEFAULT_CONNECTION_LABEL = "Connection"
+    DEFAULT_POWER_LABEL = "Power Level"
+    DEFAULT_TRANSMISSION_LABEL = "Transmission Testing"
+    DEFAULT_NOT_CONNECTED = "NOT CONNECTED"
+    DEFAULT_POWER_UNKNOWN = "Unknown"
+    DEFAULT_TRANSMISSION_NOT_TESTED = "NOT TESTED"
+    DEFAULT_TRANSMISSION_OK = "OK"
+
     def _setup_ui(self):
         # Whenever the model changes, call self.update_ui
         self.model.model_changed.connect(self.update_ui)
@@ -33,7 +43,7 @@ class SystemCheckWidget(BaseWidget):
         middle_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         # Top label
-        self.top_label = QLabel("System Check in progress...")
+        self.top_label = QLabel(self.DEFAULT_TOP_LABEL)
         self.top_label.setAlignment(Qt.AlignCenter)
         middle_layout.addWidget(self.top_label)
 
@@ -43,7 +53,7 @@ class SystemCheckWidget(BaseWidget):
         row_connection = QHBoxLayout()
         row_connection.setAlignment(Qt.AlignCenter)
 
-        self.label_connection = QLabel("Connection")
+        self.label_connection = QLabel(self.DEFAULT_CONNECTION_LABEL)
         self.label_connection.setAlignment(Qt.AlignCenter)
         row_connection.addWidget(self.label_connection)
 
@@ -58,7 +68,7 @@ class SystemCheckWidget(BaseWidget):
         row_power = QHBoxLayout()
         row_power.setAlignment(Qt.AlignCenter)
 
-        self.label_power = QLabel("Power Level")
+        self.label_power = QLabel(self.DEFAULT_POWER_LABEL)
         self.label_power.setAlignment(Qt.AlignCenter)
         row_power.addWidget(self.label_power)
 
@@ -72,7 +82,7 @@ class SystemCheckWidget(BaseWidget):
         row_transmission = QHBoxLayout()
         row_transmission.setAlignment(Qt.AlignCenter)
 
-        self.label_transmission = QLabel("Transmission Testing")
+        self.label_transmission = QLabel(self.DEFAULT_TRANSMISSION_LABEL)
         self.label_transmission.setAlignment(Qt.AlignCenter)
         row_transmission.addWidget(self.label_transmission)
 
@@ -106,12 +116,12 @@ class SystemCheckWidget(BaseWidget):
         # Connection
         # ---------------------------
         if self.model.is_connected:
-            self.label_connection.setText(f"Connection: {self.model.connection_type.value}")
+            self.label_connection.setText(f"{self.DEFAULT_CONNECTION_LABEL}: {self.model.connection_type.value}")
             # Replace spinner with a check
             self.spinner_connection.setIcon(self.green_check_icon)
         else:
             # If the user disconnected or wasn't connected
-            self.label_connection.setText("Connection: NOT CONNECTED")
+            self.label_connection.setText(f"{self.DEFAULT_CONNECTION_LABEL}: {self.DEFAULT_NOT_CONNECTED}")
             # Optionally revert to spinner icon:
             self.spinner_connection.setIcon(self.spin_icon_conn)
 
@@ -120,29 +130,28 @@ class SystemCheckWidget(BaseWidget):
         # ---------------------------
         # If you store power_level = -1 (or some sentinel) for "unchecked," use that logic:
         if self.model.power_level == -1:
-            self.label_power.setText("Power Level: Unknown")
+            self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {self.DEFAULT_POWER_UNKNOWN}")
             self.spinner_power.setIcon(self.spin_icon_power)
         else:
-            self.label_power.setText(f"Power Level: {self.model.power_level}%")
+            self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {self.model.power_level}%")
             self.spinner_power.setIcon(self.green_check_icon)
 
         # ---------------------------
         # Transmission
         # ---------------------------
         if self.model.transmission_ok:
-            self.label_transmission.setText("Transmission: OK")
+            self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {self.DEFAULT_TRANSMISSION_OK}")
             self.spinner_transmission.setIcon(self.green_check_icon)
         else:
-            self.label_transmission.setText("Transmission: NOT TESTED")
+            self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {self.DEFAULT_TRANSMISSION_NOT_TESTED}")
             self.spinner_transmission.setIcon(self.spin_icon_trans)
 
     def reset_ui(self):
         self.reset_spinners()
-        self.label_connection.setText("Connection")
-        self.label_power.setText("Power Level")
-        self.label_transmission.setText("Transmission Testing")
-        self.top_label.setText("System Check in progress...")
-
+        self.label_connection.setText(self.DEFAULT_CONNECTION_LABEL)
+        self.label_power.setText(self.DEFAULT_POWER_LABEL)
+        self.label_transmission.setText(self.DEFAULT_TRANSMISSION_LABEL)
+        self.top_label.setText(self.DEFAULT_TOP_LABEL)
 
     def reset_spinners(self):
         # 1) Connection spinner

@@ -5,6 +5,12 @@ from PyQt5.QtCore import Qt, QSize
 from views.common.base_widget import BaseWidget
 
 class GracefulDisconnectWidget(BaseWidget):
+    # Default label strings
+    DEFAULT_TOP_LABEL = "Graceful Disconnect in progress..."
+    DEFAULT_CONNECTION_LABEL = "Ending Connection"
+    DEFAULT_POWER_LABEL = "Shutting Off Power"
+    DEFAULT_TRANSMISSION_LABEL = "Ending Transmission"
+
     def _setup_ui(self):
         # Connect to model_changed so we can update check marks/spinners
         self.model.model_changed.connect(self.update_ui)
@@ -28,7 +34,7 @@ class GracefulDisconnectWidget(BaseWidget):
         middle_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
         # Top label
-        self.top_label = QLabel("Graceful Disconnect in progress...")
+        self.top_label = QLabel(self.DEFAULT_TOP_LABEL)
         self.top_label.setAlignment(Qt.AlignCenter)
         middle_layout.addWidget(self.top_label)
 
@@ -38,7 +44,7 @@ class GracefulDisconnectWidget(BaseWidget):
         row_connection = QHBoxLayout()
         row_connection.setAlignment(Qt.AlignCenter)
 
-        self.label_connection = QLabel("Ending Connection")
+        self.label_connection = QLabel(self.DEFAULT_CONNECTION_LABEL)
         self.label_connection.setAlignment(Qt.AlignCenter)
         row_connection.addWidget(self.label_connection)
 
@@ -52,7 +58,7 @@ class GracefulDisconnectWidget(BaseWidget):
         row_power = QHBoxLayout()
         row_power.setAlignment(Qt.AlignCenter)
 
-        self.label_power = QLabel("Shutting Off Power")
+        self.label_power = QLabel(self.DEFAULT_POWER_LABEL)
         self.label_power.setAlignment(Qt.AlignCenter)
         row_power.addWidget(self.label_power)
 
@@ -66,7 +72,7 @@ class GracefulDisconnectWidget(BaseWidget):
         row_transmission = QHBoxLayout()
         row_transmission.setAlignment(Qt.AlignCenter)
 
-        self.label_transmission = QLabel("Ending Transmission")
+        self.label_transmission = QLabel(self.DEFAULT_TRANSMISSION_LABEL)
         self.label_transmission.setAlignment(Qt.AlignCenter)
         row_transmission.addWidget(self.label_transmission)
 
@@ -121,10 +127,10 @@ class GracefulDisconnectWidget(BaseWidget):
 
     def reset_ui(self):
         self.reset_spinners()
-        self.label_connection.setText("Ending Connection")
-        self.label_power.setText("Shutting Off Power")
-        self.label_transmission.setText("Ending Transmission")
-        self.top_label.setText("Graceful Disconnect in progress...")
+        self.label_connection.setText(self.DEFAULT_CONNECTION_LABEL)
+        self.label_power.setText(self.DEFAULT_POWER_LABEL)
+        self.label_transmission.setText(self.DEFAULT_TRANSMISSION_LABEL)
+        self.top_label.setText(self.DEFAULT_TOP_LABEL)
 
     def reset_spinners(self):
         # Connection
