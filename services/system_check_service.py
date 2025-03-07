@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject, pyqtSignal, QThread
+from PyQt5.QtCore import QObject, pyqtSignal, QThread, QTimer, QEventLoop
 import time
 from enums.connection_type import ConnectionType
 from services.connection_interface import ConnectionFactory
@@ -13,6 +13,9 @@ class SystemCheckService(QObject):
     transmission_checked = pyqtSignal(bool)  # Now includes success status
     finished = pyqtSignal()
     error = pyqtSignal(str)  # New signal for error reporting
+    
+    # Add delay between check steps (in milliseconds)
+    STEP_DELAY = 1500  # 1.5 seconds
 
     def __init__(self, model: Model = None):
         super().__init__()
@@ -23,6 +26,12 @@ class SystemCheckService(QObject):
     def set_connection_type(self, connection_type: ConnectionType):
         """Set the connection type to use for the system check"""
         self.connection_type = connection_type
+        
+    def delay(self, milliseconds):
+        """Non-blocking delay using QTimer and QEventLoop"""
+        loop = QEventLoop()
+        QTimer.singleShot(milliseconds, loop.quit)
+        loop.exec_()
 
     def run_system_check(self):
         """
@@ -47,6 +56,9 @@ class SystemCheckService(QObject):
         if self.connection.connect():
             print("Connection successful")
             self.connection_checked.emit()
+            
+            # Add delay to allow the UI to update and show success
+            self.delay(self.STEP_DELAY)
         else:
             self.error.emit(f"Failed to connect via {self.connection_type.name}")
             return
@@ -62,6 +74,9 @@ class SystemCheckService(QObject):
             if self.model:
                 self.model.power_level = power_level
             self.power_checked.emit(power_level)
+            
+            # Add delay to allow the UI to update and show success
+            self.delay(self.STEP_DELAY)
         else:
             self.error.emit("Failed to check power level")
             return
@@ -76,6 +91,9 @@ class SystemCheckService(QObject):
         if self.model:
             self.model.transmission_ok = transmission_ok
         self.transmission_checked.emit(transmission_ok)
+        
+        # Add delay to allow the UI to update and show success
+        self.delay(self.STEP_DELAY)
         
         # Complete
         if not QThread.currentThread().isInterruptionRequested():

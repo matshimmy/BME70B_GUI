@@ -6,10 +6,11 @@ from services.connection_interface import ConnectionInterface
 class BluetoothConnection(ConnectionInterface):
     """Bluetooth connection implementation using bleak library"""
     
-    # You'll need to replace these with your actual device characteristics
-    DEVICE_NAME = "YourDeviceName"
-    COMMAND_CHARACTERISTIC = "0000ffxx-0000-1000-8000-00805f9b34fb"
-    RESPONSE_CHARACTERISTIC = "0000ffyy-0000-1000-8000-00805f9b34fb"
+    # Define the service and characteristic UUIDs
+    DEVICE_NAME = "Nano33BLE"
+    SERVICE_UUID = "12345678-1234-1234-1234-123456789abc"
+    COMMAND_CHARACTERISTIC = "12345678-1234-1234-1234-123456789def"
+    RESPONSE_CHARACTERISTIC = "12345678-1234-1234-1234-12345678090e"
     
     def __init__(self):
         self.device = None
@@ -51,6 +52,31 @@ class BluetoothConnection(ConnectionInterface):
         
         if connected:
             print(f"Connected to {self.device.name}")
+            
+            # Debug: List all services and characteristics
+            for service in self.client.services:
+                print(f"Service: {service.uuid}")
+                for char in service.characteristics:
+                    print(f"  Characteristic: {char.uuid}, Properties: {char.properties}")
+            
+            # Verify our required characteristics are available
+            try:
+                services = self.client.services
+                service_found = False
+                for service in services:
+                    if service.uuid.lower() == self.SERVICE_UUID.lower():
+                        service_found = True
+                        print(f"Found service: {service.uuid}")
+                        break
+                
+                if not service_found:
+                    print(f"WARNING: Service {self.SERVICE_UUID} not found!")
+                    # Continue anyway as the UUIDs might be registered in a different way
+            
+            except Exception as e:
+                print(f"Error checking services: {e}")
+                # Continue anyway, as we'll catch errors later when actually using characteristics
+            
             return True
         else:
             print("Failed to connect")
@@ -85,27 +111,57 @@ class BluetoothConnection(ConnectionInterface):
     
     async def _send_command_async(self, command):
         """Async method to send command and receive response"""
-        # Write the command
-        await self.client.write_gatt_char(self.COMMAND_CHARACTERISTIC, (command + "\n").encode())
-        
-        # Read the response
-        await asyncio.sleep(0.5)  # Give device time to process
-        response = await self.client.read_gatt_char(self.RESPONSE_CHARACTERISTIC)
-        return response.decode().strip()
+        try:
+            # Clean the command string and encode it
+            command = command.strip()
+            cmd_bytes = command.encode()
+            print(f"Sending command: '{command}'")
+            
+            # Try to write to the characteristic
+            await self.client.write_gatt_char(self.COMMAND_CHARACTERISTIC, cmd_bytes)
+            
+            # Read the response
+            await asyncio.sleep(0.5)  # Give device time to process
+            response = await self.client.read_gatt_char(self.RESPONSE_CHARACTERISTIC)
+            
+            # Decode response
+            decoded = response.decode().strip()
+            print(f"Received response: '{decoded}'")
+            return decoded
+            
+        except Exception as e:
+            print(f"Error in send_command_async: {e}")
+            raise
     
     def check_power(self):
         """Check the power level of the device"""
-        response = self.send_command("CHECK POWER")
         try:
+            print("Checking power...")
+            response = self.send_command("CHECK POWER")
+            
+            # If the response contains an error, return 0
+            if "ERROR:" in response:
+                print(f"Power check error: {response}")
+                return 0
+                
             # Assuming the response is in the format "POWER:XX" where XX is the battery percentage
             if "POWER:" in response:
                 power_level = int(response.split("POWER:")[1].strip())
+                print(f"Power level reported: {power_level}%")
                 return power_level
+                
+            print(f"Unexpected power response format: {response}")
             return 0
-        except:
+        except Exception as e:
+            print(f"Failed to check power level: {e}")
             return 0
     
     def test_transmission(self):
         """Test data transmission with the device"""
-        response = self.send_command("TEST TRANSMISSION")
-        return "OK" in response 
+        try:
+            print("Testing transmission...")
+            response = self.send_command("TEST TRANSMISSION")
+            return "OK" in response
+        except Exception as e:
+            print(f"Transmission test failed: {e}")
+            return False 

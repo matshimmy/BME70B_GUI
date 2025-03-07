@@ -33,7 +33,6 @@ class Model(QObject):
         self.model_changed.emit()
 
     def check_power(self):
-        self.power_level = 100
         self.model_changed.emit()
 
     def test_transmission(self):
