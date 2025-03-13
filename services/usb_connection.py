@@ -43,9 +43,7 @@ class USBConnection(ConnectionInterface):
             time.sleep(0.1)
             response = ""
             while self.arduino.in_waiting:
-                print(1)
                 response += self.arduino.readline().decode().strip()
-            print("try")
             return response
         except Exception as e:
             print(f"Command error: {e}")
