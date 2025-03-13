@@ -25,7 +25,7 @@ class AcquisitionService(QObject):
         response = self.connection.send_command(f"SET SAMPLE {sampling_freq}")
         print(f"Configure sampling rate response: {response}")
         
-        # You can add additional configuration commands here based on your protocol
+        # for sine wave
         response = self.connection.send_command("SET FREQ 1")
         print(f"Configure signal frequency response: {response}")
 
@@ -72,10 +72,37 @@ class AcquisitionService(QObject):
                         response = self.connection.send_command("GET DATA")
                         if response and not response.startswith("ERROR"):
                             try:
-                                data = float(response)
-                                self.chunk_buffer.append(data)
-                            except ValueError:
-                                print(f"Invalid data received: {response}")
+                                # Parse the comma-separated response with SINE header
+                                # Format: 'SINE,val1,val2,val3,...,CRC'
+                                parts = response.strip().split(',')
+                                
+                                # Skip the first part ("SINE") and remove empty parts
+                                adc_values = [int(part) for part in parts[1:] if part]
+                                
+                                # Check if we have data
+                                if len(adc_values) > 0:
+                                    # If the last value is the CRC checksum
+                                    if len(adc_values) > 1:  # Need at least one data point plus CRC
+                                        # Verify CRC if present (last value)
+                                        received_crc = adc_values[-1]
+                                        calculated_crc = sum(adc_values[:-1]) % 256
+                                        
+                                        if received_crc == calculated_crc:
+                                            # Remove CRC from data
+                                            adc_values = adc_values[:-1]
+                                        else:
+                                            print(f"CRC mismatch: received {received_crc}, calculated {calculated_crc}")
+                                            # Continue with the data anyway, but log the error
+                                    
+                                    # Convert ADC values to voltage: V = ADC * (3.3/4095)
+                                    voltages = [adc * (3.3/4095) for adc in adc_values]
+                                    
+                                    # Add all voltage values to the buffer
+                                    self.chunk_buffer.extend(voltages)
+                            except ValueError as ve:
+                                print(f"Invalid data received: {response}, Error: {ve}")
+                            except Exception as e:
+                                print(f"Error processing data: {response}, Error: {e}")
                     
                     # When we have enough data, emit the chunk
                     if len(self.chunk_buffer) >= chunk_size:
