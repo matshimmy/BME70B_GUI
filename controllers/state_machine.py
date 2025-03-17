@@ -52,9 +52,10 @@ class StateMachine(QObject):
     def transition_to_acquisition_options(self):
         self.transition_to(AppState.ACQUISITION_OPTIONS)
     
-    def update_acquisition_options(self, get_template: bool, sampling_rate: float):
+    def update_acquisition_options(self, get_template: bool, sampling_rate: float, circuit: int):
         self.model.get_template = get_template
         self.model.sampling_rate = sampling_rate
+        self.model.circuit = circuit
         self.model.model_changed.emit()
 
     def start_acquisition(self):

@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
-    QSizePolicy, QLabel, QComboBox, QCheckBox
+    QSizePolicy, QLabel, QComboBox, QCheckBox, QRadioButton, QButtonGroup
 )
 from PyQt5.QtCore import Qt
 
@@ -61,6 +61,31 @@ class AcquisitionOptionsWidget(QWidget):
         sampling_layout.addWidget(self.combo_sampling)
         options_layout.addLayout(sampling_layout)
 
+        # ---------------------------
+        # Radio Buttons for Circuit Selection
+        # ---------------------------
+        circuit_label = QLabel("Circuit Selection:")
+        circuit_label.setAlignment(Qt.AlignCenter)
+        options_layout.addWidget(circuit_label)
+
+        circuit_radio_layout = QHBoxLayout()
+        circuit_radio_layout.setAlignment(Qt.AlignCenter)
+
+        self.circuit_0_radio = QRadioButton("Circuit 0")
+        self.circuit_1_radio = QRadioButton("Circuit 1")
+
+        # Default to Circuit 0
+        self.circuit_0_radio.setChecked(True)
+
+        circuit_radio_layout.addWidget(self.circuit_0_radio)
+        circuit_radio_layout.addWidget(self.circuit_1_radio)
+        options_layout.addLayout(circuit_radio_layout)
+
+        # Group the radio buttons
+        self.circuit_radio_group = QButtonGroup()
+        self.circuit_radio_group.addButton(self.circuit_0_radio, 0)
+        self.circuit_radio_group.addButton(self.circuit_1_radio, 1)
+
         main_layout.addLayout(options_layout)
 
         # Spacer below the buttons
@@ -90,8 +115,15 @@ class AcquisitionOptionsWidget(QWidget):
 
         sampling_rate = float(sampling_rate_str.split()[0])
 
+        # Get selected circuit
+        selected_circuit = self.circuit_radio_group.checkedId()
+
         # Update state machine
-        self.state_machine.update_acquisition_options(self.template_checkbox.isChecked(), sampling_rate)
+        self.state_machine.update_acquisition_options(
+            self.template_checkbox.isChecked(), 
+            sampling_rate,
+            selected_circuit
+        )
 
         # Finally start the acquisition
         self.device_controller.start_acquisition()

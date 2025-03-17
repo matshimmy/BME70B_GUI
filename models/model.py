@@ -97,6 +97,7 @@ class Model(QObject):
         self.get_template = None
         self.sampling_rate = None
         self.acquisition_running = False
+        self.circuit = 0  # Default to circuit 0
 
         # Simulation
         self.template_model = TemplateModel()

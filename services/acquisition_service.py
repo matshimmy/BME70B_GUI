@@ -20,7 +20,7 @@ class AcquisitionService(QObject):
         self.chunk_buffer = []
         
         # Arduino setup
-        self.arduino = serial.Serial(port='COM3', baudrate=9600)
+        self.arduino = serial.Serial(port='COM4', baudrate=9600)
 
     def send_command(self, command):
         self.arduino.write((command + "\n").encode())
@@ -35,8 +35,10 @@ class AcquisitionService(QObject):
         response = self.send_command(f"SET SAMPLE {sampFreq}")
         # Wait for acknowledgment that contains "Sampling freq"
         
-        response = self.send_command("SET FREQ 1")
+        # response = self.send_command("SET FREQ 1")
         # Wait for acknowledgment that contains "Signal freq"
+
+        response = self.send_command(f"SET SIG {self.model.circuit}")
         
         response = self.send_command("START")
         # Wait for "Streaming started" message
@@ -53,6 +55,7 @@ class AcquisitionService(QObject):
 
             if self.arduino.in_waiting:
                 try:
+                    # print("Reading data from Arduino: ", self.arduino.readline().decode().strip())
                     data = float(self.arduino.readline().decode().strip())
                     self.chunk_buffer.append(data)
                     
