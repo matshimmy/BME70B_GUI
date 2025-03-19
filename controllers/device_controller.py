@@ -3,7 +3,6 @@ from services.system_check_service import SystemCheckService
 from services.graceful_disconnect_service import GracefulDisconnectService
 from services.acquisition_service import AcquisitionService
 from controllers.state_machine import StateMachine
-from services.connection_interface import ConnectionFactory
 
 from enums.connection_type import ConnectionType
 
@@ -85,7 +84,9 @@ class DeviceController:
             self.systemCheckThread.wait()
             # Return to idle state
             self.state_machine.disconnect_device()
-            self.active_connection = None
+        else:
+            self.state_machine.disconnect_device()
+        self.active_connection = None
 
     def handle_connect_checked(self, success: bool):
         """Handle when connection check is complete"""
@@ -118,9 +119,7 @@ class DeviceController:
         # Clean up the thread
         self.systemCheckThread.quit()
         self.systemCheckThread.wait()
-        # Return to idle state
-        self.state_machine.disconnect_device()
-        self.active_connection = None
+        # Don't transition to IDLE - let user click abort to do that
 
     # --------------------------------------------------------------------------
     # GRACEFUL DISCONNECT TASK

@@ -124,29 +124,36 @@ class SystemCheckWidget(BaseWidget):
         elif self.model.connection_status == ConnectionStatus.CONNECTION_FAILED:
             self.label_connection.setText(f"{self.DEFAULT_CONNECTION_LABEL}: {ConnectionStatus.CONNECTION_FAILED.value}")
             self.spinner_connection.setIcon(self.red_x_icon)
+            # When connection fails, show X for all spinners
+            self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {ConnectionStatus.CONNECTION_FAILED.value}")
+            self.spinner_power.setIcon(self.red_x_icon)
+            self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {ConnectionStatus.CONNECTION_FAILED.value}")
+            self.spinner_transmission.setIcon(self.red_x_icon)
         else:  # NOT_CONNECTED
             self.label_connection.setText(f"{self.DEFAULT_CONNECTION_LABEL}: {ConnectionStatus.NOT_CONNECTED.value}")
             self.spinner_connection.setIcon(self.spin_icon_conn)
 
-        # ---------------------------
-        # Power
-        # ---------------------------
-        if self.model.power_level == -1:
-            self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {self.DEFAULT_POWER_UNKNOWN}")
-            self.spinner_power.setIcon(self.spin_icon_power)
-        else:
-            self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {self.model.power_level}%")
-            self.spinner_power.setIcon(self.green_check_icon)
+        # Only update power and transmission if connection is successful
+        if self.model.connection_status == ConnectionStatus.CONNECTED:
+            # ---------------------------
+            # Power
+            # ---------------------------
+            if self.model.power_level == -1:
+                self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {self.DEFAULT_POWER_UNKNOWN}")
+                self.spinner_power.setIcon(self.spin_icon_power)
+            else:
+                self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {self.model.power_level}%")
+                self.spinner_power.setIcon(self.green_check_icon)
 
-        # ---------------------------
-        # Transmission
-        # ---------------------------
-        if self.model.transmission_ok:
-            self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {self.DEFAULT_TRANSMISSION_OK}")
-            self.spinner_transmission.setIcon(self.green_check_icon)
-        else:
-            self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {self.DEFAULT_TRANSMISSION_NOT_TESTED}")
-            self.spinner_transmission.setIcon(self.spin_icon_trans)
+            # ---------------------------
+            # Transmission
+            # ---------------------------
+            if self.model.transmission_ok:
+                self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {self.DEFAULT_TRANSMISSION_OK}")
+                self.spinner_transmission.setIcon(self.green_check_icon)
+            else:
+                self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {self.DEFAULT_TRANSMISSION_NOT_TESTED}")
+                self.spinner_transmission.setIcon(self.spin_icon_trans)
 
     def reset_ui(self):
         self.reset_spinners()
