@@ -34,8 +34,8 @@ class StateMachine(QObject):
     # --------------------------------------------------------------------------
     # SYSTEM CHECK
     # --------------------------------------------------------------------------
-    def do_system_check_connection(self):
-        self.model.check_connection()
+    def do_system_check_connection(self, success: bool):
+        self.model.check_connection(success)
 
     def do_system_check_power(self):
         self.model.check_power()

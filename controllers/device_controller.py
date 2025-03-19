@@ -87,9 +87,9 @@ class DeviceController:
             self.state_machine.disconnect_device()
             self.active_connection = None
 
-    def handle_connect_checked(self):
+    def handle_connect_checked(self, success: bool):
         """Handle when connection check is complete"""
-        self.state_machine.do_system_check_connection()
+        self.state_machine.do_system_check_connection(success)
 
     def handle_power_checked(self, power_level: int):
         """Handle when power check is complete"""

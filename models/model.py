@@ -3,6 +3,7 @@ from models.signal_data import SignalData
 from models.template_processor import TemplateProcessor
 from models.template_model import TemplateModel
 from enums.connection_type import ConnectionType
+from enums.connection_status import ConnectionStatus
 from models.signal_simulation_model import SignalSimulationModel
 from enums.simulation_type import SimulationType
 
@@ -18,6 +19,7 @@ class Model(QObject):
     # --------------------------------------------------------------------------
     def connect(self, conn_type: ConnectionType):
         self.connection_type = conn_type
+        self.connection_status = ConnectionStatus.NOT_CONNECTED
         self.transmission_ok = False
         self.model_changed.emit()
 
@@ -28,8 +30,11 @@ class Model(QObject):
     # --------------------------------------------------------------------------
     # PUBLIC METHODS - System Check Steps
     # --------------------------------------------------------------------------
-    def check_connection(self):
-        self.is_connected = True
+    def check_connection(self, success: bool):
+        if success:
+            self.connection_status = ConnectionStatus.CONNECTED
+        else:
+            self.connection_status = ConnectionStatus.CONNECTION_FAILED
         self.model_changed.emit()
 
     def check_power(self):
@@ -83,7 +88,7 @@ class Model(QObject):
 
         # Connection
         self.connection_type = None
-        self.is_connected = False
+        self.connection_status = ConnectionStatus.NOT_CONNECTED
         self.power_level = -1
         self.transmission_ok = False
 

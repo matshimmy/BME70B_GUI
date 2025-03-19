@@ -8,7 +8,7 @@ class SystemCheckService(QObject):
     """
     Worker dedicated to running the system check in a separate thread.
     """
-    connection_checked = pyqtSignal()
+    connection_checked = pyqtSignal(bool)
     power_checked = pyqtSignal(int)  # Now includes power level
     transmission_checked = pyqtSignal(bool)  # Now includes success status
     finished = pyqtSignal()
@@ -55,12 +55,13 @@ class SystemCheckService(QObject):
         print(f"Connecting via {self.connection_type.name}...")
         if self.connection.connect():
             print("Connection successful")
-            self.connection_checked.emit()
+            self.connection_checked.emit(True)
             
             # Add delay to allow the UI to update and show success
             self.delay(self.STEP_DELAY)
         else:
             self.error.emit(f"Failed to connect via {self.connection_type.name}")
+            self.connection_checked.emit(False)
             return
 
         # 2) Power check
