@@ -1,9 +1,37 @@
 import serial
 import time
+import serial.tools.list_ports
 from services.connection_interface import ConnectionInterface
 
 class USBConnection(ConnectionInterface):
     """USB/Serial connection implementation"""
+    
+    @staticmethod
+    def scan_for_arduino():
+        """Scan all available COM ports and return a list of potential Arduino ports"""
+        arduino_ports = []
+        ports = serial.tools.list_ports.comports()
+        
+        for port in ports:
+            # Check for Nano 33 IoT or Nano 33 BLE specific identifiers
+            description = port.description.lower()
+            hwid = port.hwid.lower()
+            
+            # Nano 33 IoT identifiers
+            if any(identifier in description for identifier in ['nano 33 iot', 'nano33iot']):
+                arduino_ports.append(port.device)
+            # Nano 33 BLE identifiers
+            elif any(identifier in description for identifier in ['nano 33 ble', 'nano33ble']):
+                arduino_ports.append(port.device)
+            # Check hardware IDs for both boards
+            elif any(identifier in hwid for identifier in [
+                '2341:805a',  # Nano 33 IoT
+                '2341:8057',  # Nano 33 BLE
+                '2341:8058'   # Alternative Nano 33 BLE ID
+            ]):
+                arduino_ports.append(port.device)
+        
+        return arduino_ports
     
     def __init__(self, port='COM4', baudrate=9600):
         self.port = port

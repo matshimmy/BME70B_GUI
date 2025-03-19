@@ -3,6 +3,7 @@ import time
 from enums.connection_type import ConnectionType
 from services.connection_interface import ConnectionFactory
 from models.model import Model
+from services.usb_connection import USBConnection
 
 class SystemCheckService(QObject):
     """
@@ -43,7 +44,19 @@ class SystemCheckService(QObject):
 
         # Create the appropriate connection interface
         try:
-            self.connection = ConnectionFactory.create_connection(self.connection_type)
+            if self.connection_type == ConnectionType.USB:
+                # For USB, first scan for available Arduino ports
+                arduino_ports = USBConnection.scan_for_arduino()
+                
+                if not arduino_ports:
+                    self.error.emit("No Arduino devices found on any COM port")
+                    self.connection_checked.emit(False)
+                    return
+                
+                # Try to connect to the first found Arduino port
+                self.connection = USBConnection(port=arduino_ports[0])
+            else:
+                self.connection = ConnectionFactory.create_connection(self.connection_type)
         except Exception as e:
             self.error.emit(f"Failed to create connection: {str(e)}")
             return
