@@ -66,12 +66,39 @@ class USBConnection(ConnectionInterface):
         if not self.is_connected():
             return "ERROR: Not connected"
         try:
+            # Clear any existing data in the buffer
+            self.arduino.reset_input_buffer()
+            
+            # Send the command
             self.arduino.write((command + "\n").encode())
-            # Wait for response with timeout
-            time.sleep(0.1)
+            
+            # Wait for acknowledgment with timeout
+            start_time = time.time()
+            ack_received = False
+            while time.time() - start_time < 2.0:  # 2 second timeout
+                if self.arduino.in_waiting:
+                    ack = self.arduino.readline().decode().strip()
+                    if ack == "ACK":
+                        ack_received = True
+                        break
+                time.sleep(0.01)  # Small sleep to prevent CPU spinning
+            
+            if not ack_received:
+                return "ERROR: No acknowledgment received"
+            
+            # Now wait for the actual response with timeout
+            start_time = time.time()
             response = ""
-            while self.arduino.in_waiting:
-                response += self.arduino.readline().decode().strip()
+            while time.time() - start_time < 2.0:  # 2 second timeout
+                if self.arduino.in_waiting:
+                    response = self.arduino.readline().decode().strip()
+                    if response:  # If we got a non-empty response
+                        break
+                time.sleep(0.01)  # Small sleep to prevent CPU spinning
+            
+            if not response:
+                return "ERROR: No response received"
+                
             return response
         except Exception as e:
             print(f"Command error: {e}")

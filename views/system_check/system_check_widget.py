@@ -152,7 +152,6 @@ class SystemCheckWidget(BaseWidget):
             # ---------------------------
             # Transmission
             # ---------------------------
-            print("transmission_ok: ", self.model.transmission_ok)
             if self.model.transmission_ok:
                 self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {self.DEFAULT_TRANSMISSION_OK}")
                 self.spinner_transmission.setIcon(self.green_check_icon)

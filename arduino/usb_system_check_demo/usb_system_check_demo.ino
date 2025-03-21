@@ -17,34 +17,22 @@ void setup() {
 
 void loop() {
   if (systemCheck == false) {
-    // Serial.println(1);
-
-    // if (Serial.available()) {
-    //   // get PC response
-    //   int received = Serial.parseInt();
-    //   if (received == true) {
-    //     systemCheck = true;
-    //   }
-    //   else {
-    //     Serial.println("Incomplete test");
-    //   }
-
-    // }
-
     if (Serial.available()) {
-      // get PC commadn
+      // get PC command
       String checkCommand = Serial.readStringUntil('\n');
-
-      // remove whitesapce, \n, carriage returns etc.
+      
+      // remove whitespace, \n, carriage returns etc.
       checkCommand.trim();
-
+      
+      // Send acknowledgment that we received the command
+      Serial.println("ACK");
+      
       if(checkCommand.startsWith("CHECK POWER")) {
         // start reading integer from index 11 onwards
-        Serial.println("POWER:50");
-        // delay(1000);
+        // USB always 100
+        Serial.println("POWER:100");
       } else if(checkCommand.startsWith("TEST TRANSMISSION")) {
         Serial.println("OK");
-        // delay(1000);
       }
     }
   }
