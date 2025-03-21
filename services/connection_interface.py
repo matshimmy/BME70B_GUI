@@ -34,6 +34,21 @@ class ConnectionInterface(ABC):
         """Test data transmission with the device"""
         pass
 
+    @abstractmethod
+    def start_streaming(self):
+        """Start streaming data from the device"""
+        pass
+
+    @abstractmethod
+    def stop_streaming(self):
+        """Stop streaming data from the device"""
+        pass
+
+    @abstractmethod
+    def send_data_chunk(self, time_data, signal_data):
+        """Send a chunk of data to the device"""
+        pass
+
 class ConnectionFactory:
     """Factory for creating appropriate connection interface based on connection type"""
     

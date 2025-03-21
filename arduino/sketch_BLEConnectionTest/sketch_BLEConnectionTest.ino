@@ -102,17 +102,30 @@ String processCommand(String command) {
     // Return OK for transmission test
     return "OK";
   }
-  else if (command.startsWith("SET SAMPLE")) {
-    // Handle sampling rate command
-    return "Sampling rate set";
-  }
-  else if (command.startsWith("SET FREQ")) {
-    // Handle frequency command
-    return "Frequency set";
-  }
   else if (command == "START") {
     // Handle start command
     return "Streaming started";
+  }
+  else if (command == "STOP") {
+    // Handle stop command
+    return "Streaming stopped";
+  }
+  else if (command.indexOf(',') != -1) {
+    // This is a data chunk in CSV format (time,value)
+    // Parse and output to Serial for plotting
+    int comma_idx = command.indexOf(',');
+    String time_str = command.substring(0, comma_idx);
+    String value_str = command.substring(comma_idx + 1);
+    
+    float time_val = time_str.toFloat();
+    float value_val = value_str.toFloat();
+    
+    // Output in format for Serial Plotter
+    Serial.print(time_val);
+    Serial.print(",");
+    Serial.println(value_val);
+    
+    return "Data received";
   }
   else {
     // Unknown command

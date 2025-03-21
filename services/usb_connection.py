@@ -122,3 +122,42 @@ class USBConnection(ConnectionInterface):
         print("response: ", response)
         return "OK" in response
     
+    def start_streaming(self):
+        """Start streaming data from the device"""
+        if not self.is_connected():
+            return False
+        try:
+            response = self.send_command("START")
+            return "Streaming started" in response
+        except Exception as e:
+            print(f"Failed to start streaming: {e}")
+            return False
+
+    def stop_streaming(self):
+        """Stop streaming data from the device"""
+        if not self.is_connected():
+            return False
+        try:
+            response = self.send_command("STOP")
+            return "Streaming stopped" in response
+        except Exception as e:
+            print(f"Failed to stop streaming: {e}")
+            return False
+
+    def send_data_chunk(self, time_data, signal_data):
+        """Send a chunk of data to the device"""
+        if not self.is_connected():
+            return False
+        try:
+            # Format data as CSV string: time,value\n
+            data_str = ""
+            for t, s in zip(time_data, signal_data):
+                data_str += f"{t:.6f},{s:.6f}\n"
+            
+            # Send the data chunk
+            self.arduino.write(data_str.encode())
+            return True
+        except Exception as e:
+            print(f"Failed to send data chunk: {e}")
+            return False
+    

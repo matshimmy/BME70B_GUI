@@ -33,6 +33,35 @@ void loop() {
         Serial.println("POWER:100");
       } else if(checkCommand.startsWith("TEST TRANSMISSION")) {
         Serial.println("OK");
+      } else if(checkCommand == "START") {
+        streaming = true;
+        Serial.println("Streaming started");
+      } else if(checkCommand == "STOP") {
+        streaming = false;
+        Serial.println("Streaming stopped");
+      }
+    }
+  }
+
+  // Handle streaming data
+  if (streaming) {
+    if (Serial.available()) {
+      String data_line = Serial.readStringUntil('\n');
+      data_line.trim();
+      
+      // Parse CSV format: time,value
+      int comma_idx = data_line.indexOf(',');
+      if (comma_idx != -1) {
+        String time_str = data_line.substring(0, comma_idx);
+        String value_str = data_line.substring(comma_idx + 1);
+        
+        float time_val = time_str.toFloat();
+        float value_val = value_str.toFloat();
+        
+        // Output in format for Serial Plotter
+        Serial.print(time_val);
+        Serial.print(",");
+        Serial.println(value_val);
       }
     }
   }

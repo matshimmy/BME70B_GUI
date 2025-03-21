@@ -3,7 +3,8 @@ import pandas as pd
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 
 class SignalSimulationModel(QObject):
-    simulation_chunk_ready = pyqtSignal()  # Signal when new data is ready
+    simulation_chunk_ready = pyqtSignal()  # Changed to no arguments since we're just using it for UI updates
+    data_chunk_ready = pyqtSignal(object, object)  # For data chunks (time_data, signal_data)
 
     def __init__(self):
         super().__init__()
@@ -94,8 +95,11 @@ class SignalSimulationModel(QObject):
             self._signal_transferred_data = np.append(self._signal_transferred_data, new_signal)
             self._time_transferred_data = np.append(self._time_transferred_data, new_time)
 
+        # Emit signals for UI update and data transfer
+        self.simulation_chunk_ready.emit()  # No arguments needed for UI update
+        self.data_chunk_ready.emit(new_time, new_signal)  # Send data for transfer
+
         self._current_transfer_index += self._buffer_size
-        self.simulation_chunk_ready.emit()
 
     def set_artifacts(self, muscle: bool, random_movement: bool, sixty_hz: bool):
         self._muscle_artifact = muscle

@@ -3,6 +3,7 @@ from services.system_check_service import SystemCheckService
 from services.graceful_disconnect_service import GracefulDisconnectService
 from services.acquisition_service import AcquisitionService
 from controllers.state_machine import StateMachine
+from services.simulation_service import SimulationService
 
 from enums.connection_type import ConnectionType
 
@@ -56,6 +57,13 @@ class DeviceController:
         # We'll create the acquisition service when needed with the active connection
         self.acquisitionService = None
         self.acquisition_running = False
+
+        # ----------------------------------------------------------------
+        # Simulation Thread & Service
+        # ----------------------------------------------------------------
+        self.simulationThread = QThread()
+        self.simulationService = None
+        self.simulation_running = False
 
     # --------------------------------------------------------------------------
     # SYSTEM CHECK TASK
@@ -262,10 +270,52 @@ class DeviceController:
     # SIMULATION TASK
     # --------------------------------------------------------------------------
     def start_simulation(self):
-        self.state_machine.start_simulation()
+        """Start the simulation process"""
+        if self.active_connection is None:
+            print("Error: No active connection available")
+            return
+            
+        if not self.simulation_running:
+            self.simulation_running = True
+            
+            # Create the simulation service with the active connection
+            self.simulationService = SimulationService(self.state_machine.model.signal_simulation, self.active_connection)
+            
+            # Move the service to the simulationThread
+            self.simulationService.moveToThread(self.simulationThread)
+            
+            # Connect the thread's started signal to run_simulation
+            self.simulationThread.started.connect(self.simulationService.run_simulation)
+            
+            # Connect service signals
+            self.simulationService.chunk_received.connect(self.handle_data_chunk_received)
+            self.simulationService.finished.connect(self.handle_simulation_finished)
+            self.simulationService.error.connect(self.handle_simulation_error)
+            
+            # Connect the data chunk signal from the model
+            self.state_machine.model.signal_simulation.data_chunk_ready.connect(self.handle_data_chunk_ready)
+            
+            # Start the thread
+            self.simulationThread.start()
+            
+            # Update the state machine
+            self.state_machine.start_simulation()
 
-    def stop_simulation(self):
-        self.state_machine.stop_simulation()
+    def handle_data_chunk_ready(self, time_data, signal_data):
+        """Handle when a new data chunk is ready to be sent"""
+        if self.active_connection and self.simulation_running:
+            self.active_connection.send_data_chunk(time_data, signal_data)
+
+    def handle_simulation_finished(self):
+        """Handle simulation completion"""
+        self.simulation_running = False
+        self.simulationThread.quit()
+        self.simulationThread.wait()
+        
+    def handle_simulation_error(self, error_message):
+        """Handle simulation errors"""
+        print(f"Simulation error: {error_message}")
+        self.stop_simulation()
 
     # --------------------------------------------------------------------------
     # OTHER DEVICE TASKS (ACQUISITION, STIMULATION)

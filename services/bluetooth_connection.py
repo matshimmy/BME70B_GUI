@@ -164,4 +164,50 @@ class BluetoothConnection(ConnectionInterface):
             return "OK" in response
         except Exception as e:
             print(f"Transmission test failed: {e}")
-            return False 
+            return False
+
+    def start_streaming(self):
+        """Start streaming data from the device"""
+        if not self.is_connected():
+            return False
+        try:
+            response = self.send_command("START")
+            return "Streaming started" in response
+        except Exception as e:
+            print(f"Failed to start streaming: {e}")
+            return False
+
+    def stop_streaming(self):
+        """Stop streaming data from the device"""
+        if not self.is_connected():
+            return False
+        try:
+            response = self.send_command("STOP")
+            return "Streaming stopped" in response
+        except Exception as e:
+            print(f"Failed to stop streaming: {e}")
+            return False
+
+    def send_data_chunk(self, time_data, signal_data):
+        """Send a chunk of data to the device"""
+        if not self.is_connected():
+            return False
+        try:
+            # Format data as CSV string: time,value\n
+            data_str = ""
+            for t, s in zip(time_data, signal_data):
+                data_str += f"{t:.6f},{s:.6f}\n"
+            
+            # Send the data chunk via BLE using the event loop
+            self.loop.run_until_complete(self._send_data_chunk_async(data_str))
+            
+            # For debugging, also print to serial
+            print(data_str.strip())  # strip() removes trailing newline
+            return True
+        except Exception as e:
+            print(f"Failed to send data chunk: {e}")
+            return False
+
+    async def _send_data_chunk_async(self, data_str):
+        """Async method to send data chunk"""
+        await self.client.write_gatt_char(self.COMMAND_CHARACTERISTIC, data_str.encode()) 
