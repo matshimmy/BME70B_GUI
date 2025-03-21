@@ -40,8 +40,8 @@ class StateMachine(QObject):
     def do_system_check_power(self):
         self.model.check_power()
 
-    def do_system_test_transmission(self):
-        self.model.test_transmission()
+    def do_system_test_transmission(self, transmission_ok: bool):
+        self.model.test_transmission(transmission_ok)
 
     def do_system_check_done(self):
         self.transition_to(AppState.MODE_SELECTION)

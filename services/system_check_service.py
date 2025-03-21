@@ -82,9 +82,10 @@ class SystemCheckService(QObject):
             
         print("Testing transmission...")
         transmission_ok = self.connection.test_transmission()
-        if self.model:
-            self.model.transmission_ok = transmission_ok
         self.transmission_checked.emit(transmission_ok)
+        if not transmission_ok:
+            self.error.emit("Failed to test transmission")
+            return
         
         # Add delay to allow the UI to update and show success
         self.delay(self.STEP_DELAY)

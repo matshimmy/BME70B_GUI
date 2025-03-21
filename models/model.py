@@ -20,7 +20,7 @@ class Model(QObject):
     def connect(self, conn_type: ConnectionType):
         self.connection_type = conn_type
         self.connection_status = ConnectionStatus.NOT_CONNECTED
-        self.transmission_ok = False
+        self.transmission_ok = None
         self.model_changed.emit()
 
     def disconnect(self):
@@ -40,8 +40,8 @@ class Model(QObject):
     def check_power(self):
         self.model_changed.emit()
 
-    def test_transmission(self):
-        self.transmission_ok = True
+    def test_transmission(self, transmission_ok: bool):
+        self.transmission_ok = transmission_ok
         self.model_changed.emit()
 
     # --------------------------------------------------------------------------
@@ -90,7 +90,7 @@ class Model(QObject):
         self.connection_type = None
         self.connection_status = ConnectionStatus.NOT_CONNECTED
         self.power_level = -1
-        self.transmission_ok = False
+        self.transmission_ok = None
 
         # Graceful Disconnect Steps
         self.disconnect_conn_done = False

@@ -100,7 +100,7 @@ class DeviceController:
     def handle_transmission_checked(self, transmission_ok: bool):
         """Handle when transmission check is complete"""
         # Update the model with the transmission status
-        self.state_machine.do_system_test_transmission()
+        self.state_machine.do_system_test_transmission(transmission_ok)
 
     def handle_system_check_done(self):
         """Handle when the system check is complete"""
