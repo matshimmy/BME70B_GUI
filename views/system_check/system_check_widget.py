@@ -132,6 +132,10 @@ class SystemCheckWidget(BaseWidget):
         else:  # NOT_CONNECTED
             self.label_connection.setText(f"{self.DEFAULT_CONNECTION_LABEL}: {ConnectionStatus.NOT_CONNECTED.value}")
             self.spinner_connection.setIcon(self.spin_icon_conn)
+            self.label_power.setText(f"{self.DEFAULT_POWER_LABEL}: {ConnectionStatus.NOT_CONNECTED.value}")
+            self.spinner_power.setIcon(self.spin_icon_power)
+            self.label_transmission.setText(f"{self.DEFAULT_TRANSMISSION_LABEL}: {ConnectionStatus.NOT_CONNECTED.value}")
+            self.spinner_transmission.setIcon(self.spin_icon_trans)
 
         # Only update power and transmission if connection is successful
         if self.model.connection_status == ConnectionStatus.CONNECTED:
