@@ -66,20 +66,6 @@ class SystemCheckWidget(BaseWidget):
         middle_layout.addLayout(row_connection)
 
         # ---------------------------
-        # Row for "Power Level"
-        # ---------------------------
-        row_power = QHBoxLayout()
-        row_power.setAlignment(Qt.AlignCenter)
-
-        self.label_power = QLabel(self.DEFAULT_POWER_LABEL)
-        self.label_power.setAlignment(Qt.AlignCenter)
-        row_power.addWidget(self.label_power)
-
-        self.spinner_power = qta.IconWidget(size=QSize(50, 50))
-        row_power.addWidget(self.spinner_power)
-        middle_layout.addLayout(row_power)
-
-        # ---------------------------
         # Row for "Transmission Testing"
         # ---------------------------
         row_transmission = QHBoxLayout()
@@ -92,6 +78,20 @@ class SystemCheckWidget(BaseWidget):
         self.spinner_transmission = qta.IconWidget(size=QSize(50, 50))
         row_transmission.addWidget(self.spinner_transmission)
         middle_layout.addLayout(row_transmission)
+
+        # ---------------------------
+        # Row for "Power Level"
+        # ---------------------------
+        row_power = QHBoxLayout()
+        row_power.setAlignment(Qt.AlignCenter)
+
+        self.label_power = QLabel(self.DEFAULT_POWER_LABEL)
+        self.label_power.setAlignment(Qt.AlignCenter)
+        row_power.addWidget(self.label_power)
+
+        self.spinner_power = qta.IconWidget(size=QSize(50, 50))
+        row_power.addWidget(self.spinner_power)
+        middle_layout.addLayout(row_power)
 
         # Spacer to keep content centered
         middle_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))

@@ -1,5 +1,4 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QThread, QTimer, QEventLoop
-import time
 from enums.connection_type import ConnectionType
 from services.connection_interface import ConnectionFactory
 from models.model import Model
@@ -77,7 +76,20 @@ class SystemCheckService(QObject):
             self.connection_checked.emit(False)
             return
 
-        # 2) Power check
+        # 2) Transmission check
+        if QThread.currentThread().isInterruptionRequested():
+            return
+            
+        print("Testing transmission...")
+        transmission_ok = self.connection.test_transmission()
+        if self.model:
+            self.model.transmission_ok = transmission_ok
+        self.transmission_checked.emit(transmission_ok)
+        
+        # Add delay to allow the UI to update and show success
+        self.delay(self.STEP_DELAY)
+
+        # 3) Power check
         if QThread.currentThread().isInterruptionRequested():
             return
             
@@ -94,20 +106,6 @@ class SystemCheckService(QObject):
         else:
             self.error.emit("Failed to check power level")
             return
-
-        # 3) Transmission check
-        if QThread.currentThread().isInterruptionRequested():
-            return
-            
-        print("Testing transmission...")
-        transmission_ok = self.connection.test_transmission()
-        # print(transmission_ok)
-        if self.model:
-            self.model.transmission_ok = transmission_ok
-        self.transmission_checked.emit(transmission_ok)
-        
-        # Add delay to allow the UI to update and show success
-        self.delay(self.STEP_DELAY)
         
         # Complete
         if not QThread.currentThread().isInterruptionRequested():
