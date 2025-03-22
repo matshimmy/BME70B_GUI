@@ -9,6 +9,11 @@ float freq;
 float sinArgIncrement;
 bool streaming = false;
 
+unsigned long lastConnectionCheck = 0;
+const unsigned long connectionCheckInterval = 5000;  // Check every 5 seconds
+bool isConnected = false;                            // Track connection state
+
+
 // Define the Service and Characteristic UUIDs in the standard format
 // Using lower case a-f for hex characters as Bleak might be case-sensitive
 const char* SERVICE_UUID = "12345678-1234-1234-1234-123456789abc";
@@ -24,36 +29,40 @@ BLEStringCharacteristic readCharacteristic(READ_CHARACTERISTIC_UUID, BLERead | B
 void setup() {
   // Start serial comms
   Serial.begin(9600);
-  
+
   // Wait up to 3 seconds for serial to connect, but continue regardless
   unsigned long startTime = millis();
-  while (!Serial && (millis() - startTime < 3000));
+  while (!Serial && (millis() - startTime < 3000))
+    ;
 
   Serial.println("Starting BLE initialization...");
-  
+
   // Begin BLE initialization
   if (!BLE.begin()) {
     Serial.println("ERROR: Could not initialize BLE!");
-    while (1);
+    while (1)
+      ;
   }
 
   // Set up the BLE device
   BLE.setDeviceName("Nano33BLE");
   BLE.setLocalName("Nano33BLE");
-  
+
   // Set initial values for characteristics
   readCharacteristic.writeValue("Ready");
-  
+
   // Add characteristics to service
   mainService.addCharacteristic(writeCharacteristic);
   mainService.addCharacteristic(readCharacteristic);
-  
+
   // Add service to BLE
   BLE.addService(mainService);
-  
+
+  writeCharacteristic.setEventHandler(BLEWritten, onCommandReceived);
+
   // Start advertising
   BLE.advertise();
-  
+
   // Log service and characteristic UUIDs for debugging
   Serial.println("BLE device ready and advertising.");
   Serial.print("Service UUID: ");
@@ -64,55 +73,34 @@ void setup() {
   Serial.println(READ_CHARACTERISTIC_UUID);
 }
 
-// Main loop
-void loop() {
-  // Listen for BLE peripherals to connect
-  BLEDevice central = BLE.central();
+void onCommandReceived(BLEDevice central, BLECharacteristic characteristic) {
+  String command = writeCharacteristic.value();
+  command.trim();
 
-  // If a central is connected
-  if (central) {
-    Serial.print("Connected to device: ");
-    Serial.println(central.address());
+  Serial.print("Received command: ");
+  Serial.println(command);
 
-    // While the central is still connected
-    while (central.connected()) {
-      // If data is written to the characteristic
-      if (writeCharacteristic.written()) {
-        // Get the value that was written
-        String command = writeCharacteristic.value();
-        
-        Serial.print("Received command: ");
-        Serial.println(command);
-        
-        // Process the command and send response
-        String response = processCommand(command);
-        Serial.print("Sending response: ");
-        Serial.println(response);
-        
-        // Write the response back
-        readCharacteristic.writeValue(response);
-      }
-    }
+  // Process the command and send response
+  String response = processCommand(command);
+  Serial.print("Sending response: ");
+  Serial.println(response);
 
-    // Central disconnected
-    Serial.println("Central disconnected.");
-  }
+  // Notify new response
+  readCharacteristic.writeValue(response);
 }
 
 String processCommand(String command) {
   // Trim any whitespace or newlines
   command.trim();
-  
+
   // Handle the different commands from the Python app
   if (command == "CHECK POWER") {
     // For now, return a fixed power level of 50%
     return "POWER:50";
-  }
-  else if (command == "TEST TRANSMISSION") {
+  } else if (command == "TEST TRANSMISSION") {
     // Return OK for transmission test
     return "OK";
-  }
-  else if (command.startsWith("SET SAMPLE")) {
+  } else if (command.startsWith("SET SAMPLE")) {
     // Handle sampling rate command
     sampFreq = command.substring(10).toInt();
     return "Sampling rate set";
@@ -125,11 +113,10 @@ String processCommand(String command) {
     Serial.println(freq);
 
     // calculate the sine increment based on the obatained values from pc
-    sinArgIncrement = 2 * PI * (freq/sampFreq);
+    sinArgIncrement = 2 * PI * (freq / sampFreq);
 
     return "Frequency set";
-  }
-  else if (command.startsWith("SET SIG")) {
+  } else if (command.startsWith("SET SIG")) {
     // ecg or emg
     int sig = command.substring(8).toInt();
 
@@ -142,12 +129,10 @@ String processCommand(String command) {
       digitalWrite(digControl, HIGH);
       return "EMG Selected";
     }
-  }
-  else if (command == "START") {
+  } else if (command == "START") {
     // Handle start command
     return "Streaming started";
-  }
-  else if (command == "GET DATA") {
+  } else if (command == "GET DATA") {
     return sendSinePacket();
   }
 
@@ -163,21 +148,21 @@ String processCommand(String command) {
 
 String sendSinePacket() {
   // Create the packet string
-  String packet = "SINE,"; // Header
-  
+  String packet = "SINE,";  // Header
+
   static float sinArg = 0.0;
-  const int numSamples = 10;  // Number of samples per packet
+  const int numSamples = 6;  // Number of samples per packet
   int samples[numSamples];
 
   // Generate 10 sine samples
   for (int i = 0; i < numSamples; i++) {
-    float sineValue = sin(sinArg);  // Generate sine wave
-    int adcValue = (sineValue + 1.0) * 2047; // Scale to 12-bit (0 to 4095)
+    float sineValue = sin(sinArg);            // Generate sine wave
+    int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
     // add one to make all values positive
     // multiply by 2047 because 0.0 in the sine is technically in the middle of the ADC range
-    
-    samples[i] = constrain(adcValue, 0, 4095); // Ensure it's within 12-bit range
-    
+
+    samples[i] = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
+
     // Convert to string with 4-digit padding (e.g., "0345")
     packet += String(samples[i]);
 
@@ -195,11 +180,25 @@ String sendSinePacket() {
 
 
   // Calculate simple checksum (CRC) - sum of ASCII values mod 256
-  // its not really a true crc, but that involves polynomial division and i think it might 
+  // its not really a true crc, but that involves polynomial division and i think it might
   // unnecessarily complicate things. this simple checksum should be enough for our purposes
   int crc = 0;
-  for (int i = 5; i < packet.length(); i++) {
-    crc += packet[i];
+
+  int startIndex = packet.indexOf(',') + 1;
+
+  while (startIndex > 0) {
+    int endIndex = packet.indexOf(',', startIndex);
+    String numberStr;
+
+    if (endIndex == -1) {  // Last number
+      numberStr = packet.substring(startIndex);
+    } else {
+      numberStr = packet.substring(startIndex, endIndex);
+    }
+
+    int num = numberStr.toInt();                        // Convert to integer
+    crc += num;                                         // Accumulate the sum
+    startIndex = (endIndex == -1) ? -1 : endIndex + 1;  // Move to next number
   }
   crc = crc % 256;
 
@@ -212,4 +211,26 @@ String sendSinePacket() {
 
   // Send packet over BLE
   return packet;
+}
+
+void loop() {
+  BLE.poll();  // Handles BLE communication
+
+  // Periodically check connection status
+  if (millis() - lastConnectionCheck >= connectionCheckInterval) {
+    lastConnectionCheck = millis();
+
+    if (BLE.connected()) {
+      if (!isConnected) {
+        Serial.println("Device connected!");
+        isConnected = true;
+      }
+    } else {
+      if (isConnected) {
+        Serial.println("Device disconnected. Restarting advertising...");
+        isConnected = false;
+        BLE.advertise();
+      }
+    }
+  }
 }

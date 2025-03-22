@@ -1,3 +1,5 @@
+#include "MCP_DAC.h"  // DAC
+
 int sampFreq;
 int sig;
 bool streaming = false;
@@ -7,12 +9,17 @@ int digControl = 8;
 int acqDig = 0;
 float voltage = 0.00;
 
+int simOut = A6;
+MCP4921 DAC_pin;  // DAC
+
+
 bool systemCheck = false;
 
 void setup() {
   Serial.begin(9600);
   pinMode(digControl, OUTPUT);
   pinMode(acqOutput, INPUT);
+  DAC_pin.begin(10);  // CS pin is D10 // DAC
 }
 
 void loop() {
@@ -20,19 +27,56 @@ void loop() {
     if (Serial.available()) {
       // get PC command
       String checkCommand = Serial.readStringUntil('\n');
-      
+
       // remove whitespace, \n, carriage returns etc.
       checkCommand.trim();
-      
+
       // Send acknowledgment that we received the command
       Serial.println("ACK");
-      
-      if(checkCommand.startsWith("CHECK POWER")) {
+
+      if (checkCommand.startsWith("CHECK POWER")) {
         // start reading integer from index 11 onwards
         // USB always 100
         Serial.println("POWER:100");
-      } else if(checkCommand.startsWith("TEST TRANSMISSION")) {
+        digitalWrite(digControl, LOW);
+      } else if (checkCommand.startsWith("TEST TRANSMISSION")) {
         Serial.println("OK");
+      } else if (checkCommand == "START") {
+        digitalWrite(digControl, HIGH);
+
+        streaming = true;
+
+        // Serial.println("Streaming started");
+      } else if (checkCommand == "STOP") {
+        streaming = false;
+        // Serial.println("Streaming stopped");
+      }
+    }
+  }
+
+  // Handle streaming data
+  if (streaming) {
+
+    if (Serial.available()) {
+      String data_line = Serial.readStringUntil('\n');
+      data_line.trim();
+
+      // Parse CSV format: time,value
+      int comma_idx = data_line.indexOf(',');
+      if (comma_idx != -1) {
+        String time_str = data_line.substring(0, comma_idx);
+        String value_str = data_line.substring(comma_idx + 1);
+
+        float time_val = time_str.toFloat();
+        float value_val = value_str.toFloat();
+
+        DAC_pin.write(value_val);  // DAC
+
+
+        // Output in format for Serial Plotter
+        Serial.print(time_val);
+        Serial.print(",");
+        Serial.println(value_val);
       }
     }
   }
