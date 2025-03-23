@@ -1,5 +1,3 @@
-import time
-import os
 import numpy as np
 from PyQt5.QtCore import QObject, pyqtSignal, QThread
 
@@ -31,7 +29,7 @@ class AcquisitionService(QObject):
 
     def start_acquisition(self):
         """Start the acquisition process"""
-        response = self.connection.send_command("START")
+        response = self.connection.send_command("START ACQ")
         print(f"Start acquisition response: {response}")
         
         if "ERROR" in response:
@@ -116,7 +114,7 @@ class AcquisitionService(QObject):
                     # Don't stop acquisition for occasional errors
             
             # Stop acquisition when we're done
-            self.connection.send_command("STOP")
+            self.connection.send_command("STOP ACQ")
             
         except Exception as e:
             self.error.emit(f"Acquisition error: {str(e)}")
@@ -129,6 +127,6 @@ class AcquisitionService(QObject):
         self._running = False
         try:
             # Send stop command to device
-            self.connection.send_command("STOP")
+            self.connection.send_command("STOP ACQ")
         except:
             pass  # Ignore errors during stop

@@ -129,7 +129,7 @@ String processCommand(String command) {
       digitalWrite(digControl, HIGH);
       return "EMG Selected";
     }
-  } else if (command == "START") {
+  } else if (command == "START ACQ") {
     // Handle start command
     return "Streaming started";
   } else if (command == "GET DATA") {
