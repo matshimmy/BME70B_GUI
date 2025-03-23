@@ -233,7 +233,7 @@ class DeviceController:
     def stop_acquisition(self):
         """Stop the acquisition process"""
         if self.acquisition_running:
-            self.acquisitionService.stop()
+            # Request interruption and quit the thread
             self.acquisitionThread.requestInterruption()
             self.acquisitionThread.quit()
             self.acquisitionThread.wait()

@@ -105,27 +105,18 @@ class AcquisitionService(QObject):
                     break
                 QThread.msleep(100)  # Sleep to prevent busy waiting
             
-            # Stop acquisition when we're done
-            self.connection.send_command("STOP ACQ")
-            
-            # If using Bluetooth, stop notifications
-            if hasattr(self.connection, 'stop_notifications'):
-                self.connection.stop_notifications()
-            
         except Exception as e:
             self.error.emit(f"Acquisition error: {str(e)}")
         finally:
+            # Clean up when stopping
             self._running = False
-            self.finished.emit()
-
-    def stop(self):
-        """Stop the acquisition process"""
-        self._running = False
-        try:
-            # Send stop command to device
-            self.connection.send_command("STOP ACQ")
-            # If using Bluetooth, stop notifications
-            if hasattr(self.connection, 'stop_notifications'):
-                self.connection.stop_notifications()
-        except:
-            pass  # Ignore errors during stop
+            try:
+                # Stop acquisition on device
+                self.connection.send_command("STOP ACQ")
+                # If using Bluetooth, stop notifications
+                if hasattr(self.connection, 'stop_notifications'):
+                    self.connection.stop_notifications()
+            except Exception as e:
+                print(f"Error during cleanup: {e}")
+            finally:
+                self.finished.emit()

@@ -138,7 +138,15 @@ class BluetoothConnection(ConnectionInterface):
     async def _send_command_async(self, command):
         """Async method to send command and receive response"""
         try:
-            # Clean the command string and encode it
+            # Handle special commands
+            if isinstance(command, tuple):
+                if command[0] == "STOP_NOTIFY":
+                    await self._stop_notifications_async()
+                    return True
+                else:
+                    raise ValueError(f"Unknown special command: {command[0]}")
+            
+            # Handle regular string commands
             command = command.strip()
             cmd_bytes = command.encode()
             print(f"Sending command: '{command}'")
