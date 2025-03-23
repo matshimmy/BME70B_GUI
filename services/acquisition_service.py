@@ -71,6 +71,9 @@ class AcquisitionService(QObject):
                 
             self._running = True
 
+            # Convert sampling rate to integer for buffer operations
+            samples_per_chunk = int(self.model.sampling_rate)
+
             # If using USB connection, use the old polling method
             if not hasattr(self.connection, 'start_notifications'):
                 while self._running:
@@ -82,15 +85,16 @@ class AcquisitionService(QObject):
                     try:
                         # For serial connection, read directly from the device
                         if hasattr(self.connection, 'arduino') and self.connection.arduino.in_waiting:
-                            data = float(self.connection.arduino.readline().decode().strip())
+                            data_str = self.connection.arduino.readline().decode().strip()
+                            data = float(data_str)
                             self.chunk_buffer.append(data)
                             
                             # When we have enough data for one second, emit the chunk
-                            if len(self.chunk_buffer) >= self.model.sampling_rate:
-                                chunk = np.array(self.chunk_buffer[:self.model.sampling_rate])
+                            if len(self.chunk_buffer) >= samples_per_chunk:
+                                chunk = np.array(self.chunk_buffer[:samples_per_chunk])
                                 self.chunk_received.emit(chunk)
                                 # Keep any remaining data
-                                self.chunk_buffer = self.chunk_buffer[self.model.sampling_rate:]
+                                self.chunk_buffer = self.chunk_buffer[samples_per_chunk:]
                     
                     except Exception as e:
                         print(f"Error during acquisition: {str(e)}")
