@@ -13,7 +13,6 @@ unsigned long lastConnectionCheck = 0;
 const unsigned long connectionCheckInterval = 5000;  // Check every 5 seconds
 bool isConnected = false;                            // Track connection state
 
-
 // Define the Service and Characteristic UUIDs in the standard format
 // Using lower case a-f for hex characters as Bleak might be case-sensitive
 const char* SERVICE_UUID = "12345678-1234-1234-1234-123456789abc";
@@ -25,6 +24,10 @@ const char* READ_CHARACTERISTIC_UUID = "12345678-1234-1234-1234-12345678090e";
 BLEService mainService(SERVICE_UUID);
 BLEStringCharacteristic writeCharacteristic(WRITE_CHARACTERISTIC_UUID, BLEWrite, 40);
 BLEStringCharacteristic readCharacteristic(READ_CHARACTERISTIC_UUID, BLERead | BLENotify, 40);
+
+// Timing variables for continuous data transmission
+unsigned long lastSampleTime = 0;
+unsigned long sampleInterval;  // Will be calculated based on sampling frequency
 
 void setup() {
   // Start serial comms
@@ -103,6 +106,8 @@ String processCommand(String command) {
   } else if (command.startsWith("SET SAMPLE")) {
     // Handle sampling rate command
     sampFreq = command.substring(10).toInt();
+    // Calculate sample interval in milliseconds
+    sampleInterval = 1000 / sampFreq;
     return "Sampling rate set";
   }
   // calc sine wave stuff
@@ -131,11 +136,14 @@ String processCommand(String command) {
     }
   } else if (command == "START ACQ") {
     // Handle start command
+    streaming = true;
+    lastSampleTime = millis();  // Reset the timing
     return "Streaming started";
-  } else if (command == "GET DATA") {
-    return sendSinePacket();
+  } else if (command == "STOP ACQ") {
+    // Handle stop command
+    streaming = false;
+    return "Streaming stopped";
   }
-
 
   else {
     // Unknown command
@@ -154,13 +162,10 @@ String sendSinePacket() {
   const int numSamples = 6;  // Number of samples per packet
   int samples[numSamples];
 
-  // Generate 10 sine samples
+  // Generate 6 sine samples
   for (int i = 0; i < numSamples; i++) {
     float sineValue = sin(sinArg);            // Generate sine wave
     int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
-    // add one to make all values positive
-    // multiply by 2047 because 0.0 in the sine is technically in the middle of the ADC range
-
     samples[i] = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
 
     // Convert to string with 4-digit padding (e.g., "0345")
@@ -177,7 +182,6 @@ String sendSinePacket() {
       sinArg -= 2 * PI;
     }
   }
-
 
   // Calculate simple checksum (CRC) - sum of ASCII values mod 256
   // its not really a true crc, but that involves polynomial division and i think it might
@@ -232,5 +236,11 @@ void loop() {
         BLE.advertise();
       }
     }
+  }
+
+  // If streaming is active and it's time for the next sample
+  if (streaming && (millis() - lastSampleTime >= sampleInterval)) {
+    lastSampleTime = millis();
+    readCharacteristic.writeValue(sendSinePacket());
   }
 }
