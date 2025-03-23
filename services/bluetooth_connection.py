@@ -44,41 +44,51 @@ class BluetoothConnection(ConnectionInterface):
     
     def _ble_thread_loop(self):
         """Run BLE operations in a separate thread with its own event loop"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
         
         try:
             # Connect to device
-            loop.run_until_complete(self._connect_async())
+            self._loop.run_until_complete(self._connect_async())
             
             # Process commands until stopped
             while not self._stop_event.is_set():
                 try:
                     # Check for commands
                     command = self._command_queue.get_nowait()
-                    
                     # Handle special commands
-                    if isinstance(command, tuple) and command[0] == "START_NOTIFY":
-                        try:
-                            loop.run_until_complete(self._start_notifications_async())
-                            self._response_queue.put(True)
-                        except Exception as e:
-                            print(f"Error starting notifications: {e}")
-                            self._response_queue.put(False)
+                    if isinstance(command, tuple):
+                        if command[0] == "START_NOTIFY":
+                            try:
+                                self._loop.run_until_complete(self._start_notifications_async())
+                                self._response_queue.put(True)
+                            except Exception as e:
+                                print(f"Error starting notifications: {e}")
+                                self._response_queue.put(False)
+                        elif command[0] == "DISCONNECT":
+                            # Handle disconnect command
+                            try:
+                                success = self._loop.run_until_complete(self._disconnect_async())
+                                self._response_queue.put(success)
+                            except Exception as e:
+                                print(f"Error during disconnect: {e}")
+                                self._response_queue.put(False)
+                            break  # Exit the command processing loop
                     else:
                         # Handle regular commands
-                        response = loop.run_until_complete(self._send_command_async(command))
+                        response = self._loop.run_until_complete(self._send_command_async(command))
                         self._response_queue.put(response)
                 except Empty:
                     pass
                 
                 # Run event loop for a short time
-                loop.run_until_complete(asyncio.sleep(0.1))
+                self._loop.run_until_complete(asyncio.sleep(0.1))
                 
         except Exception as e:
             print(f"BLE thread error: {e}")
         finally:
-            loop.close()
+            if not self._loop.is_closed():
+                self._loop.close()
     
     async def _connect_async(self):
         """Async method to establish Bluetooth connection"""
@@ -111,12 +121,50 @@ class BluetoothConnection(ConnectionInterface):
             self._response_queue.put(False)
             return False
     
+    async def _disconnect_async(self):
+        """Async method to disconnect from the Bluetooth device"""
+        try:
+            if self.client:
+                # Try to stop notifications, but don't fail if they're already stopped
+                try:
+                    await self.client.stop_notify(self.RESPONSE_CHARACTERISTIC)
+                except Exception as e:
+                    pass  # Ignore errors when stopping notifications
+                
+                # Then disconnect
+                await self.client.disconnect()
+                return True
+        except Exception as e:
+            print(f"Error in disconnect_async: {e}")
+        return False
+
     def disconnect(self):
         """Disconnect from the Bluetooth device"""
-        self._stop_event.set()
-        if self._ble_thread:
-            self._ble_thread.join()
-        self._connected = False
+        try:
+            # First stop any ongoing data transmission
+            if self.is_connected():
+                self.send_command("STOP ACQ")
+            
+            # Send disconnect command to the BLE thread
+            if self._command_queue:
+                self._command_queue.put(("DISCONNECT", None))
+                # Wait for disconnect to complete
+                try:
+                    success = self._response_queue.get(timeout=1.0)
+                except:
+                    pass
+            
+            # Set stop event to signal thread to terminate
+            self._stop_event.set()
+            
+            # Wait for thread to finish with timeout
+            if self._ble_thread:
+                self._ble_thread.join(timeout=1.0)  # Wait up to 1 second
+            
+            self._connected = False
+        except Exception as e:
+            print(f"Error during disconnect: {e}")
+            self._connected = False
     
     def is_connected(self):
         """Check if the Bluetooth connection is active"""
@@ -149,7 +197,6 @@ class BluetoothConnection(ConnectionInterface):
             # Handle regular string commands
             command = command.strip()
             cmd_bytes = command.encode()
-            print(f"Sending command: '{command}'")
             
             # Try to write to the characteristic
             await self.client.write_gatt_char(self.COMMAND_CHARACTERISTIC, cmd_bytes)
@@ -164,9 +211,7 @@ class BluetoothConnection(ConnectionInterface):
             response = await self.client.read_gatt_char(self.RESPONSE_CHARACTERISTIC)
             
             # Decode response
-            decoded = response.decode().strip()
-            print(f"Received response: '{decoded}'")
-            return decoded
+            return response.decode().strip()
             
         except Exception as e:
             print(f"Error in send_command_async: {e}")
