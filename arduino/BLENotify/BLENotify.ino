@@ -28,6 +28,8 @@ BLEStringCharacteristic readCharacteristic(READ_CHARACTERISTIC_UUID, BLERead | B
 // Timing variables for continuous data transmission
 unsigned long lastSampleTime = 0;
 unsigned long sampleInterval;  // Will be calculated based on sampling frequency
+unsigned long lastPacketTime = 0;  // Track when last packet was sent
+unsigned long packetInterval;  // Time between packets (6 samples per packet)
 
 void setup() {
   // Start serial comms
@@ -74,6 +76,10 @@ void setup() {
   Serial.println(WRITE_CHARACTERISTIC_UUID);
   Serial.print("Read Characteristic UUID: ");
   Serial.println(READ_CHARACTERISTIC_UUID);
+
+  // Calculate initial intervals
+  sampleInterval = 1000000 / sampFreq;  // Convert Hz to microseconds
+  packetInterval = sampleInterval * 6;   // 6 samples per packet
 }
 
 void onCommandReceived(BLEDevice central, BLECharacteristic characteristic) {
@@ -106,8 +112,9 @@ String processCommand(String command) {
   } else if (command.startsWith("SET SAMPLE")) {
     // Handle sampling rate command
     sampFreq = command.substring(10).toInt();
-    // Calculate sample interval in milliseconds
-    sampleInterval = 1000 / sampFreq;
+    // Calculate sample interval in microseconds
+    sampleInterval = 1000000 / sampFreq;
+    packetInterval = sampleInterval * 6;  // 6 samples per packet
     return "Sampling rate set";
   }
   // calc sine wave stuff
@@ -137,7 +144,7 @@ String processCommand(String command) {
   } else if (command == "START ACQ") {
     // Handle start command
     streaming = true;
-    lastSampleTime = millis();  // Reset the timing
+    lastSampleTime = micros();  // Reset the timing
     return "Streaming started";
   } else if (command == "STOP ACQ") {
     // Handle stop command
@@ -238,9 +245,12 @@ void loop() {
     }
   }
 
-  // If streaming is active and it's time for the next sample
-  if (streaming && (millis() - lastSampleTime >= sampleInterval)) {
-    lastSampleTime = millis();
-    readCharacteristic.writeValue(sendSinePacket());
+  // If streaming is active and it's time for the next packet
+  if (streaming) {
+    unsigned long currentTime = micros();
+    if (currentTime - lastPacketTime >= packetInterval) {
+      lastPacketTime = currentTime;
+      readCharacteristic.writeValue(sendSinePacket());
+    }
   }
 }
