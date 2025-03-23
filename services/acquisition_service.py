@@ -15,28 +15,46 @@ class AcquisitionService(QObject):
         self.connection = connection
         self._running = False
         self.chunk_buffer = []
+        
+        # Set up notification callback if using Bluetooth
+        if hasattr(self.connection, 'set_notification_callback'):
+            self.connection.set_notification_callback(self._handle_notification)
 
     def configure_acquisition(self):
         """Configure the device for acquisition with the current model settings"""
         # Send configuration commands based on the model settings
         sampling_freq = str(self.model.sampling_rate)
         response = self.connection.send_command(f"SET SAMPLE {sampling_freq}")
-        print(f"Configure sampling rate response: {response}")
         
         # for sine wave
         response = self.connection.send_command("SET FREQ 1")
-        print(f"Configure signal frequency response: {response}")
 
     def start_acquisition(self):
         """Start the acquisition process"""
+        # If using Bluetooth, start notifications first
+        if hasattr(self.connection, 'start_notifications'):
+            if not self.connection.start_notifications(self.model.sampling_rate):
+                self.error.emit("Failed to start notifications")
+                return False
+        
+        # Then send START ACQ command
         response = self.connection.send_command("START ACQ")
-        print(f"Start acquisition response: {response}")
         
         if "ERROR" in response:
             self.error.emit(f"Failed to start acquisition: {response}")
             return False
         
-        return "Streaming started" in response
+        return True
+
+    def _handle_notification(self, data):
+        """Handle incoming notification data from Bluetooth"""
+        if self._running:
+            # Convert to numpy array and emit
+            chunk = np.array(data)
+            self.chunk_received.emit(chunk)
+        else:
+            # Ignore chunks if acquisition is not running
+            pass
 
     def run_acquisition(self):
         """Main acquisition loop that collects data and emits chunks"""
@@ -52,69 +70,47 @@ class AcquisitionService(QObject):
                 return
                 
             self._running = True
-            chunk_size = 30  # Number of samples to collect before emitting
 
+            # If using USB connection, use the old polling method
+            if not hasattr(self.connection, 'start_notifications'):
+                while self._running:
+                    if QThread.currentThread().isInterruptionRequested():
+                        self._running = False
+                        break
+
+                    # Get data from the device
+                    try:
+                        # For serial connection, read directly from the device
+                        if hasattr(self.connection, 'arduino') and self.connection.arduino.in_waiting:
+                            data = float(self.connection.arduino.readline().decode().strip())
+                            self.chunk_buffer.append(data)
+                            
+                            # When we have enough data for one second, emit the chunk
+                            if len(self.chunk_buffer) >= self.model.sampling_rate:
+                                chunk = np.array(self.chunk_buffer[:self.model.sampling_rate])
+                                self.chunk_received.emit(chunk)
+                                # Keep any remaining data
+                                self.chunk_buffer = self.chunk_buffer[self.model.sampling_rate:]
+                    
+                    except Exception as e:
+                        print(f"Error during acquisition: {str(e)}")
+                        # Don't stop acquisition for occasional errors
+            
+            # For Bluetooth, we don't need to do anything here as notifications handle the data
+            
+            # Wait until we're stopped
             while self._running:
                 if QThread.currentThread().isInterruptionRequested():
                     self._running = False
                     break
-
-                # Get data from the device
-                try:
-                    # For serial connection, read directly from the device
-                    if hasattr(self.connection, 'arduino') and self.connection.arduino.in_waiting:
-                        data = float(self.connection.arduino.readline().decode().strip())
-                        self.chunk_buffer.append(data)
-                    # For other connections, use a command to get data
-                    else:
-                        response = self.connection.send_command("GET DATA")
-                        if response and not response.startswith("ERROR"):
-                            try:
-                                # Parse the comma-separated response with SINE header
-                                # Format: 'SINE,val1,val2,val3,...,CRC'
-                                parts = response.strip().split(',')
-                                
-                                # Skip the first part ("SINE") and remove empty parts
-                                adc_values = [int(part) for part in parts[1:] if part]
-                                
-                                # Check if we have data
-                                if len(adc_values) > 0:
-                                    # If the last value is the CRC checksum
-                                    if len(adc_values) > 1:  # Need at least one data point plus CRC
-                                        # Verify CRC if present (last value)
-                                        received_crc = adc_values[-1]
-                                        calculated_crc = sum(adc_values[:-1]) % 256
-                                        
-                                        if received_crc == calculated_crc:
-                                            # Remove CRC from data
-                                            adc_values = adc_values[:-1]
-                                        else:
-                                            print(f"CRC mismatch: received {received_crc}, calculated {calculated_crc}")
-                                            # Continue with the data anyway, but log the error
-                                    
-                                    # Convert ADC values to voltage: V = ADC * (3.3/4095)
-                                    voltages = [adc * (3.3/4095) for adc in adc_values]
-                                    
-                                    # Add all voltage values to the buffer
-                                    self.chunk_buffer.extend(voltages)
-                            except ValueError as ve:
-                                print(f"Invalid data received: {response}, Error: {ve}")
-                            except Exception as e:
-                                print(f"Error processing data: {response}, Error: {e}")
-                    
-                    # When we have enough data, emit the chunk
-                    if len(self.chunk_buffer) >= chunk_size:
-                        chunk = np.array(self.chunk_buffer[:chunk_size])
-                        self.chunk_received.emit(chunk)
-                        # Keep any remaining data
-                        self.chunk_buffer = self.chunk_buffer[chunk_size:]
-                
-                except Exception as e:
-                    print(f"Error during acquisition: {str(e)}")
-                    # Don't stop acquisition for occasional errors
+                QThread.msleep(100)  # Sleep to prevent busy waiting
             
             # Stop acquisition when we're done
             self.connection.send_command("STOP ACQ")
+            
+            # If using Bluetooth, stop notifications
+            if hasattr(self.connection, 'stop_notifications'):
+                self.connection.stop_notifications()
             
         except Exception as e:
             self.error.emit(f"Acquisition error: {str(e)}")
@@ -128,5 +124,8 @@ class AcquisitionService(QObject):
         try:
             # Send stop command to device
             self.connection.send_command("STOP ACQ")
+            # If using Bluetooth, stop notifications
+            if hasattr(self.connection, 'stop_notifications'):
+                self.connection.stop_notifications()
         except:
             pass  # Ignore errors during stop
