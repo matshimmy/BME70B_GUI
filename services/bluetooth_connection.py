@@ -65,6 +65,13 @@ class BluetoothConnection(ConnectionInterface):
                             except Exception as e:
                                 print(f"Error starting notifications: {e}")
                                 self._response_queue.put(False)
+                        elif command[0] == "STOP_NOTIFY":
+                            try:
+                                self._loop.run_until_complete(self._stop_notifications_async())
+                                self._response_queue.put(True)
+                            except Exception as e:
+                                print(f"Error stopping notifications: {e}")
+                                self._response_queue.put(False)
                         elif command[0] == "DISCONNECT":
                             # Handle disconnect command
                             try:
@@ -294,7 +301,9 @@ class BluetoothConnection(ConnectionInterface):
             # Send command to stop notifications through the command queue
             self._command_queue.put(("STOP_NOTIFY", None))
             # Wait for confirmation
-            self._response_queue.get(timeout=5.0)
+            response = self._response_queue.get(timeout=5.0)
+            if not response:
+                print("Failed to stop notifications")
         except Exception as e:
             print(f"Error stopping notifications: {e}")
     
