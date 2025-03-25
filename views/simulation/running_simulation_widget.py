@@ -120,7 +120,7 @@ class RunningSimulationWidget(BaseWidget):
         # Simulation status
         self.simulation_status_label.setText("Signal")
 
-        # Simulation button
+        # Simulation button - start in paused state
         self.simulation_button.setEnabled(True)
         self.simulation_button.setText("Start Simulation")
         self.simulation_button.setObjectName("greenButton")
@@ -140,27 +140,40 @@ class RunningSimulationWidget(BaseWidget):
     #  Slots: Pause/Resume, Update Graph, Disconnect, etc.
     # -------------------------------------------------------------------------
     def toggle_simulation(self):
-        self.state_machine.toggle_simulation()
-        if self.model.simulation_running:
-            self.simulation_button.setText("Pause Simulation")
-            self.simulation_status_label.setText("Transferring...")
-            self.simulation_button.setObjectName("amberButton")
-            self.back_button.setEnabled(False)
+        if not self.model.simulation_running:
+            # Start device simulation first
+            self.device_controller.start_simulation()
             if self.model.simulation_type == SimulationType.TEMPLATE:
                 self.template_editor.enable_editing(False)
                 template_data = self.template_model.get_template_data()
                 template_duration = self.template_model._duration
                 self.signal_simulation.set_template_data(template_data, template_duration)
-                
+            
             self.signal_simulation.start_simulation()
+            self.simulation_button.setText("Pause Simulation")
+            self.simulation_status_label.setText("Transferring...")
+            self.simulation_button.setObjectName("amberButton")
+            self.back_button.setEnabled(False)
         else:
-            self.simulation_button.setText("Resume Simulation")
-            self.simulation_status_label.setText("Signal")
-            self.simulation_button.setObjectName("greenButton")
-            self.back_button.setEnabled(True)
-            if self.model.simulation_type == SimulationType.TEMPLATE:
-                self.template_editor.enable_editing(True)
-            self.signal_simulation.pause_simulation()
+            # Check if we're currently paused
+            if self.simulation_button.text() == "Resume Simulation":
+                # Resume simulation
+                self.signal_simulation.resume_simulation()
+                self.simulation_button.setText("Pause Simulation")
+                self.simulation_status_label.setText("Transferring...")
+                self.simulation_button.setObjectName("amberButton")
+                self.back_button.setEnabled(False)
+                if self.model.simulation_type == SimulationType.TEMPLATE:
+                    self.template_editor.enable_editing(False)
+            else:
+                # Pause simulation
+                self.signal_simulation.pause_simulation()
+                self.simulation_button.setText("Resume Simulation")
+                self.simulation_status_label.setText("Signal")
+                self.simulation_button.setObjectName("greenButton")
+                self.back_button.setEnabled(True)
+                if self.model.simulation_type == SimulationType.TEMPLATE:
+                    self.template_editor.enable_editing(True)
 
         self._update_button_style(self.simulation_button)
 

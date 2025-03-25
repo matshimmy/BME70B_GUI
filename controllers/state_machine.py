@@ -82,14 +82,17 @@ class StateMachine(QObject):
     def transition_to_simulation_options(self):
         self.transition_to(AppState.SIMULATION_OPTIONS)
 
-    def start_simulation(self):
+    def transition_to_running_simulation(self):
+        """Transition to the running simulation state"""
         self.transition_to(AppState.RUNNING_SIMULATION)
 
-    def toggle_simulation(self):
-        self.model.simulation_running = not self.model.simulation_running
+    def start_simulation(self):
+        """Start the simulation and update the model"""
+        self.model.simulation_running = True
         self.model.model_changed.emit()
 
     def stop_simulation(self):
+        """Stop the simulation and update the model"""
         self.model.simulation_running = False
         self.model.model_changed.emit()
 
