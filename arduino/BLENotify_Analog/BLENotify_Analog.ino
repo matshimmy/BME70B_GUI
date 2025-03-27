@@ -1,236 +1,99 @@
 #include <ArduinoBLE.h>
 
-int digControl = 8;
-int acqOutput = A7;
-int acqDig = 0;
+// Pin assignments
+int digControl = 8;   // Digital pin controlling ECG/EMG selection
+int acqOutput = A7;   // Analog input (simulated data source)
+int acqDig = 0;       // Unused but declared
 
+// Global variables
 int sampFreq;
 float freq;
-// float sinArgIncrement;
 bool streaming = false;
 
 unsigned long lastConnectionCheck = 0;
-const unsigned long connectionCheckInterval = 5000;  // Check every 5 seconds
-bool isConnected = false;                            // Track connection state
+const unsigned long connectionCheckInterval = 5000;  // check every 5 seconds
+bool isConnected = false;                            // track connection state
 
-// Define the Service and Characteristic UUIDs in the standard format
-// Using lower case a-f for hex characters as Bleak might be case-sensitive
+// BLE Service and Characteristic UUIDs
 const char* SERVICE_UUID = "12345678-1234-1234-1234-123456789abc";
 const char* WRITE_CHARACTERISTIC_UUID = "12345678-1234-1234-1234-123456789def";
-const char* READ_CHARACTERISTIC_UUID = "12345678-1234-1234-1234-12345678090e";
+const char* READ_CHARACTERISTIC_UUID  = "12345678-1234-1234-1234-12345678090e";
 
-// Create service and characteristics
-// buffer = 40 bytes (i believe this is the max for the arduino)
+// Create BLE service and characteristics
 BLEService mainService(SERVICE_UUID);
 BLEStringCharacteristic writeCharacteristic(WRITE_CHARACTERISTIC_UUID, BLEWrite, 40);
 BLEStringCharacteristic readCharacteristic(READ_CHARACTERISTIC_UUID, BLERead | BLENotify, 40);
 
 // Timing variables for continuous data transmission
 unsigned long lastSampleTime = 0;
-unsigned long sampleInterval;  // Will be calculated based on sampling frequency
-unsigned long lastPacketTime = 0;  // Track when last packet was sent
-unsigned long packetInterval;  // Time between packets (6 samples per packet)
+unsigned long sampleInterval;    // microseconds between samples
+unsigned long lastPacketTime = 0;
+unsigned long packetInterval;    // microseconds between packets (6 samples/packet)
 
+// Forward declarations
+void onCommandReceived(BLEDevice central, BLECharacteristic characteristic);
+String processCommand(const String& command);
+String buildPacket();
+
+// ----------------------------------------------------------------------------
+// SETUP
+// ----------------------------------------------------------------------------
 void setup() {
-  // Start serial comms
   Serial.begin(9600);
 
-  // Wait up to 3 seconds for serial to connect, but continue regardless
+  // wait up to 3s for Serial
   unsigned long startTime = millis();
-  while (!Serial && (millis() - startTime < 3000))
-    ;
-
-  Serial.println("Starting BLE initialization...");
-
-  // Begin BLE initialization
-  if (!BLE.begin()) {
-    Serial.println("ERROR: Could not initialize BLE!");
-    while (1)
-      ;
+  while (!Serial && (millis() - startTime < 3000)) {
+    // do nothing
   }
 
-  // Set up the BLE device
+  // Configure pins
+  pinMode(digControl, OUTPUT);
+  digitalWrite(digControl, LOW);
+  pinMode(acqOutput, INPUT);
+
+  // Initialize BLE
+  if (!BLE.begin()) {
+    // Critical error message only
+    Serial.println("ERROR: Could not initialize BLE!");
+    while (true) {
+      // hang if BLE fails to init
+    }
+  }
+
+  // Set BLE device name
   BLE.setDeviceName("Nano33BLE");
   BLE.setLocalName("Nano33BLE");
 
-  // Set initial values for characteristics
+  // Put initial value in read characteristic
   readCharacteristic.writeValue("Ready");
 
-  // Add characteristics to service
+  // Add characteristics to service, then add service
   mainService.addCharacteristic(writeCharacteristic);
   mainService.addCharacteristic(readCharacteristic);
-
-  // Add service to BLE
   BLE.addService(mainService);
 
+  // Set write handler
   writeCharacteristic.setEventHandler(BLEWritten, onCommandReceived);
 
   // Start advertising
   BLE.advertise();
 
-  // Log service and characteristic UUIDs for debugging
-  Serial.println("BLE device ready and advertising.");
-  Serial.print("Service UUID: ");
-  Serial.println(SERVICE_UUID);
-  Serial.print("Write Characteristic UUID: ");
-  Serial.println(WRITE_CHARACTERISTIC_UUID);
-  Serial.print("Read Characteristic UUID: ");
-  Serial.println(READ_CHARACTERISTIC_UUID);
-
-  // Calculate initial intervals
-  sampleInterval = 1000000 / sampFreq;  // Convert Hz to microseconds
-  packetInterval = sampleInterval * 6;   // 6 samples per packet
-
-  pinMode(acqOutput, INPUT);
-  pinMode(digControl, OUTPUT);
+  // Ensure sampFreq is valid (avoid divide-by-zero)
+  if (sampFreq <= 0) {
+    sampFreq = 1;
+  }
+  // Calculate intervals
+  sampleInterval = 1000000UL / sampFreq;
+  packetInterval = sampleInterval * 6;
 }
 
-void onCommandReceived(BLEDevice central, BLECharacteristic characteristic) {
-  String command = writeCharacteristic.value();
-  command.trim();
-
-  Serial.print("Received command: ");
-  Serial.println(command);
-
-  // Process the command and send response
-  String response = processCommand(command);
-  Serial.print("Sending response: ");
-  Serial.println(response);
-
-  // Notify new response
-  readCharacteristic.writeValue(response);
-}
-
-String processCommand(String command) {
-  // Trim any whitespace or newlines
-  command.trim();
-
-  // Handle the different commands from the Python app
-  if (command == "CHECK POWER") {
-    // For now, return a fixed power level of 50%
-    return "POWER:50";
-  } else if (command == "TEST TRANSMISSION") {
-    // Return OK for transmission test
-    return "OK";
-  } else if (command.startsWith("SET SAMPLE")) {
-    // Handle sampling rate command
-    sampFreq = command.substring(10).toInt();
-    // Calculate sample interval in microseconds
-    sampleInterval = 1000000 / sampFreq;
-    packetInterval = sampleInterval * 6;  // 6 samples per packet
-    return "Sampling rate set";
-  }
-  // calc sine wave stuff
-  // else if (command.startsWith("SET FREQ")) {
-    // Handle frequency command
-    // freq = command.substring(9).toInt();
-    // Serial.print("Signal freq = ");
-    // Serial.println(freq);
-
-    // // calculate the sine increment based on the obatained values from pc
-    // sinArgIncrement = 2 * PI * (freq / sampFreq);
-
-    // return "Frequency set";
-  // }
-   else if (command.startsWith("SET FREQ")) {
-    // ecg or emg
-    int sig = command.substring(8).toInt();
-
-    if (sig == 0) {
-      digitalWrite(digControl, LOW);
-      return "ECG Selected";
-    }
-
-    if (sig == 1) {
-      digitalWrite(digControl, HIGH);
-      return "EMG Selected";
-    }
-  } else if (command == "START ACQ") {
-    // Handle start command
-    streaming = true;
-    lastSampleTime = micros();  // Reset the timing
-    return "Streaming started";
-  } else if (command == "STOP ACQ") {
-    // Handle stop command
-    streaming = false;
-    return "Streaming stopped";
-  }
-
-  else {
-    // Unknown command
-    Serial.print("Unknown command received: '");
-    Serial.print(command);
-    Serial.println("'");
-    return "ERROR: Unknown command";
-  }
-}
-
-String sendSinePacket() {
-  // Create the packet string
-  String packet = "SINE,";  // Header
-
-  // static float sinArg = 0.0;
-  const int numSamples = 6;  // Number of samples per packet
-  int samples[numSamples];
-
-  // Generate 6 sine samples
-  for (int i = 0; i < numSamples; i++) {
-    // float sineValue = sin(sinArg);            // Generate sine wave
-    // int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
-    int adcValue = analogRead(acqOutput);
-    samples[i] = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
-
-    // Convert to string with 4-digit padding (e.g., "0345")
-    packet += String(samples[i]);
-
-    // Add comma separator (except for last value)
-    if (i < numSamples - 1) {
-      packet += ",";
-    }
-
-    // Increment sine wave argument
-    // sinArg += sinArgIncrement;
-    // if (sinArg > 2 * PI) {
-    //   sinArg -= 2 * PI;
-    // }
-  }
-
-  // Calculate simple checksum (CRC) - sum of ASCII values mod 256
-  // its not really a true crc, but that involves polynomial division and i think it might
-  // unnecessarily complicate things. this simple checksum should be enough for our purposes
-  int crc = 0;
-
-  int startIndex = packet.indexOf(',') + 1;
-
-  while (startIndex > 0) {
-    int endIndex = packet.indexOf(',', startIndex);
-    String numberStr;
-
-    if (endIndex == -1) {  // Last number
-      numberStr = packet.substring(startIndex);
-    } else {
-      numberStr = packet.substring(startIndex, endIndex);
-    }
-
-    int num = numberStr.toInt();                        // Convert to integer
-    crc += num;                                         // Accumulate the sum
-    startIndex = (endIndex == -1) ? -1 : endIndex + 1;  // Move to next number
-  }
-  crc = crc % 256;
-
-  // Append CRC (as 3-digit number)
-  packet += "," + String(crc);
-
-  // Debug output
-  Serial.print("Sending packet: ");
-  Serial.println(packet);
-
-  // Send packet over BLE
-  return packet;
-}
-
+// ----------------------------------------------------------------------------
+// LOOP
+// ----------------------------------------------------------------------------
 void loop() {
-  BLE.poll();  // Handles BLE communication
+  // Keep BLE stack alive
+  BLE.poll();
 
   // Periodically check connection status
   if (millis() - lastConnectionCheck >= connectionCheckInterval) {
@@ -238,24 +101,146 @@ void loop() {
 
     if (BLE.connected()) {
       if (!isConnected) {
-        Serial.println("Device connected!");
         isConnected = true;
+        // If you want a connection message, uncomment:
+        // Serial.println("Device connected!");
       }
     } else {
       if (isConnected) {
-        Serial.println("Device disconnected. Restarting advertising...");
         isConnected = false;
+        // If you want a disconnect message, uncomment:
+        // Serial.println("Device disconnected. Restarting advertising...");
         BLE.advertise();
       }
     }
   }
 
-  // If streaming is active and it's time for the next packet
+  // If streaming is active and time for next packet
   if (streaming) {
     unsigned long currentTime = micros();
     if (currentTime - lastPacketTime >= packetInterval) {
       lastPacketTime = currentTime;
-      readCharacteristic.writeValue(sendSinePacket());
+
+      // Build and send one packet
+      String packet = buildPacket();
+      readCharacteristic.writeValue(packet);
     }
   }
+}
+
+// ----------------------------------------------------------------------------
+// BLE WRITE EVENT HANDLER
+// ----------------------------------------------------------------------------
+void onCommandReceived(BLEDevice central, BLECharacteristic characteristic) {
+  // Get command
+  String command = writeCharacteristic.value();
+  command.trim();
+
+  // Process and send response
+  String response = processCommand(command);
+  readCharacteristic.writeValue(response);
+}
+
+// ----------------------------------------------------------------------------
+// COMMAND PROCESSING
+// ----------------------------------------------------------------------------
+String processCommand(const String& commandIn) {
+  // We trim up front in onCommandReceived(), but do it here again if needed
+  String command = commandIn;
+  command.trim();
+
+  if (command == "CHECK POWER") {
+    return "POWER:50";
+  }
+  else if (command == "TEST TRANSMISSION") {
+    return "OK";
+  }
+  else if (command.startsWith("SET SAMPLE")) {
+    sampFreq = command.substring(10).toInt();
+    if (sampFreq <= 0) {
+      sampFreq = 1;
+    }
+    sampleInterval = 1000000UL / sampFreq;
+    packetInterval = sampleInterval * 6;
+    return "Sampling rate set";
+  }
+  else if (command.startsWith("SET FREQ")) {
+    // Re-purposed to toggle digital pin
+    int sig = command.substring(8).toInt();
+    if (sig == 0) {
+      digitalWrite(digControl, LOW);
+      return "ECG Selected";
+    } else if (sig == 1) {
+      digitalWrite(digControl, HIGH);
+      return "EMG Selected";
+    }
+  }
+  else if (command == "START ACQ") {
+    streaming = true;
+    lastSampleTime = micros();
+    return "Streaming started";
+  }
+  else if (command == "STOP ACQ") {
+    streaming = false;
+    return "Streaming stopped";
+  }
+
+  // Unknown command
+  Serial.print("Unknown command received: ");
+  Serial.println(command);
+  return "ERROR: Unknown command";
+}
+
+// ----------------------------------------------------------------------------
+// BUILD PACKET (ANALOG READ VERSION)
+// ----------------------------------------------------------------------------
+String buildPacket() {
+  // We build a packet in the format:
+  //   SINE, val0, val1, ... val5, CRC
+  // but here reading from analog pin A7 for each sample.
+
+  String packet = "SINE,"; 
+  const int numSamples = 6;
+  int samples[numSamples];
+
+  // Gather 6 readings
+  for (int i = 0; i < numSamples; i++) {
+    int adcValue = analogRead(acqOutput);
+    // If you want to treat it as 12-bit, ensure 0-4095
+    samples[i] = constrain(adcValue, 0, 4095);
+
+    packet += samples[i];
+    if (i < numSamples - 1) {
+      packet += ",";
+    }
+  }
+
+  // Compute simple checksum (sum of values mod 256)
+  int crc = 0;
+  int startIndex = packet.indexOf(',') + 1; // skip "SINE,"
+
+  while (startIndex > 0 && startIndex < (int)packet.length()) {
+    int endIndex = packet.indexOf(',', startIndex);
+    String numberStr;
+
+    if (endIndex == -1) {
+      // last number
+      numberStr = packet.substring(startIndex);
+    } else {
+      numberStr = packet.substring(startIndex, endIndex);
+    }
+
+    int val = numberStr.toInt();
+    crc += val;
+    startIndex = (endIndex == -1) ? -1 : endIndex + 1;
+  }
+
+  crc = crc % 256;
+  packet += "," + String(crc);
+
+  // No extra prints here to avoid flooding
+  // If you want to debug each packet uncomment: (could freeze)
+  // Serial.println(packet);
+
+  return packet;
 }
