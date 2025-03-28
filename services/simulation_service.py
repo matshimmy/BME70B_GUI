@@ -8,6 +8,7 @@ from enums.simulation_type import SimulationType
 class SimulationService(QObject):
     finished = pyqtSignal()
     error = pyqtSignal(str)
+    ready = pyqtSignal()  # New signal to indicate setup is complete
 
     def __init__(self, model: Model, connection: USBConnection):
         super().__init__()
@@ -69,6 +70,9 @@ class SimulationService(QObject):
                 
             # Set running flag
             self._running = True
+
+            # Emit ready signal after setup is complete
+            self.ready.emit()
             
             # Main simulation loop
             while self._running and not self.thread().isInterruptionRequested():

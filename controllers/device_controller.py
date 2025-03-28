@@ -298,12 +298,10 @@ class DeviceController:
             # Connect service signals
             self.simulationService.finished.connect(self.handle_simulation_finished)
             self.simulationService.error.connect(self.handle_simulation_error)
+            self.simulationService.ready.connect(self.handle_simulation_ready)  # Connect to ready signal
             
             # Start the thread
             self.simulationThread.start()
-            
-            # Update the state machine
-            self.state_machine.start_simulation()
 
     def stop_simulation(self):
         """Stop the simulation process"""
@@ -327,6 +325,11 @@ class DeviceController:
         """Handle simulation errors"""
         print(f"Simulation error: {error_message}")
         self.stop_simulation()
+
+    def handle_simulation_ready(self):
+        """Handle when simulation service is ready"""
+        # Update the state machine after service is ready
+        self.state_machine.start_simulation()
 
     def send_simulation_data(self, data):
         """Send data to the simulation service"""

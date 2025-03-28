@@ -104,7 +104,7 @@ class Model(QObject):
 
         # Simulation
         self.template_model = TemplateModel()
-        self.signal_simulation = SignalSimulationModel()
+        self.signal_simulation = SignalSimulationModel(model=self)
         self.simulation_type = SimulationType.TEMPLATE
 
         self.simulation_running = False

@@ -7,7 +7,7 @@ class DataGenerationThread(QThread):
     data_ready = pyqtSignal(float)  # Signal for sending data to device
     buffer_ready = pyqtSignal()     # Signal for updating visualization
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, model=None):
         super().__init__(parent)
         self._running = False
         self._transmission_rate = 100  # Hz
@@ -21,6 +21,7 @@ class DataGenerationThread(QThread):
         self._last_buffer_time = 0
         self._device_controller = None
         self._paused = False
+        self._model = model  # Store the main model reference
 
     def set_data(self, time_data, signal_data, template_mode=False, template_data=None):
         self._time_data = time_data
@@ -42,6 +43,10 @@ class DataGenerationThread(QThread):
 
     def run(self):
         self._running = True
+        # Wait for model's simulation_running to be True before starting the loop
+        while self._running and not self._model.simulation_running:
+            time.sleep(0.01)  # Small sleep while waiting
+            
         while self._running:
             if self._paused:
                 time.sleep(0.1)
@@ -80,7 +85,7 @@ class DataGenerationThread(QThread):
 class SignalSimulationModel(QObject):
     simulation_chunk_ready = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, model=None):
         super().__init__()
         self._transmission_rate = 100  # Hz
         self._buffer_size = self._transmission_rate
@@ -91,7 +96,7 @@ class SignalSimulationModel(QObject):
         self._current_transfer_index = 0
         
         # Data generation thread
-        self._generation_thread = DataGenerationThread(self)
+        self._generation_thread = DataGenerationThread(self, model)  # Pass the model to the thread
         self._generation_thread.buffer_ready.connect(self._handle_buffer_ready)
         
         # Artifact parameters
