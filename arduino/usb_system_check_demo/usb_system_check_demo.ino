@@ -40,16 +40,17 @@ void loop() {
     Serial.println("ACK");
 
     if (simulation_mode) {
-      // In simulation mode, treat numeric data as a command
-      float value = checkCommand.toFloat();
-      if (checkCommand != "0") {  // Check if valid number
-        // Output the value to DAC
+      // In simulation mode, check for DATA: prefix
+      if (checkCommand.startsWith("DATA:")) {
+        // Extract the numeric value after DATA:
+        String valueStr = checkCommand.substring(5);  // Skip "DATA:"
+        valueStr.trim();  // Remove any whitespace
+        
+        // Convert to float and output to DAC
+        float value = valueStr.toFloat();
         DAC_pin.write(value);
         Serial.println("OK");
         return;  // Skip further command processing
-      } else {
-        Serial.println("ERROR: checkCommand is 0");
-        return;
       }
     }
 
@@ -59,6 +60,8 @@ void loop() {
       Serial.println("POWER:100");
       digitalWrite(digControl, LOW);
     } else if (checkCommand.startsWith("TEST TRANSMISSION")) {
+      simulation_mode = false;
+      acquisition_mode = false;
       Serial.println("OK");
     } else if (checkCommand.startsWith("SET SAMPLE")) {
       // Handle sampling rate command (only needed for acquisition mode)

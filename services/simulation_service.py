@@ -47,8 +47,8 @@ class SimulationService(QObject):
                 self.error.emit("Simulation not running")
                 return False
 
-            # Send the data as a command
-            response = self.connection.send_command(f"{data:.6f}")
+            # Send the data with DATA: prefix
+            response = self.connection.send_command(f"DATA:{data:.6f}")
             if "ERROR" in response:
                 print(f"SimulationService: Error response from device: {response}")  # Debug print
                 return False

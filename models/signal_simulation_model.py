@@ -52,31 +52,26 @@ class DataGenerationThread(QThread):
                 time.sleep(0.1)
                 continue
 
-            current_time = time.time()
-            elapsed = current_time - self._last_send_time
-            interval = 1.0 / self._transmission_rate
+            if self._template_mode:
+                value = self._signal_data[self._current_index % len(self._signal_data)]
+            else:
+                if self._current_index >= len(self._signal_data):
+                    self._running = False
+                    break
+                value = self._signal_data[self._current_index]
 
-            if elapsed >= interval:
-                if self._template_mode:
-                    value = self._signal_data[self._current_index % len(self._signal_data)]
-                else:
-                    if self._current_index >= len(self._signal_data):
-                        self._running = False
-                        break
-                    value = self._signal_data[self._current_index]
+            # Send data point directly to device if controller is available
+            if self._device_controller:
+                self._device_controller.send_simulation_data(value)
+            
+            # Update visualization buffer
+            if self._current_index % self._buffer_size == 0:
+                self.buffer_ready.emit()
 
-                # Send data point directly to device if controller is available
-                if self._device_controller:
-                    self._device_controller.send_simulation_data(value)
-                
-                # Update visualization buffer
-                if self._current_index % self._buffer_size == 0:
-                    self.buffer_ready.emit()
-
-                self._current_index += 1
-                self._last_send_time = current_time
-
-            time.sleep(0.01)
+            self._current_index += 1
+            
+            # Sleep for exactly the interval needed for the desired transmission rate
+            time.sleep(1.0 / self._transmission_rate)
 
     def stop(self):
         self._running = False
