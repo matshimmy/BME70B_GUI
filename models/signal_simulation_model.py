@@ -132,6 +132,11 @@ class SignalSimulationModel(QObject):
         self._template_mode = False
         self._template_data = None
 
+    def set_transmission_rate(self, rate):
+        self._transmission_rate = rate
+        self._buffer_size = rate
+        self._generation_thread.set_transmission_rate(rate)
+
     def set_device_controller(self, controller):
         self._generation_thread._device_controller = controller
 
@@ -185,7 +190,10 @@ class SignalSimulationModel(QObject):
         if self._template_mode:
             cycle_duration = self._time_data[-1] - self._time_data[0]
             current_cycle = self._current_transfer_index // len(self._signal_data)
-            new_time = self._time_data + (cycle_duration * current_cycle)
+            # Calculate the start time for this cycle
+            start_time = cycle_duration * current_cycle
+            # Create time array for this cycle starting from the correct time
+            new_time = np.linspace(start_time, start_time + cycle_duration, len(self._signal_data))
             new_signal = self._signal_data.copy()
         else:
             buffer_size = self._generation_thread._buffer_size

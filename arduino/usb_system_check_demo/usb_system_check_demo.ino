@@ -42,11 +42,14 @@ void loop() {
     if (simulation_mode) {
       // In simulation mode, treat numeric data as a command
       float value = checkCommand.toFloat();
-      if (value != 0.0 || checkCommand == "0") {  // Check if valid number
+      if (checkCommand != "0") {  // Check if valid number
         // Output the value to DAC
         DAC_pin.write(value);
         Serial.println("OK");
         return;  // Skip further command processing
+      } else {
+        Serial.println("ERROR: checkCommand is 0");
+        return;
       }
     }
 
