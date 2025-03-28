@@ -104,7 +104,12 @@ class Model(QObject):
 
         # Simulation
         self.template_model = TemplateModel()
-        self.signal_simulation = SignalSimulationModel(model=self)
+        # Initialize signal_simulation if it doesn't exist, otherwise reset it
+        if not hasattr(self, 'signal_simulation'):
+            self.signal_simulation = SignalSimulationModel(model=self)
+        else:
+            self.signal_simulation.reset()
+
         self.simulation_type = SimulationType.TEMPLATE
 
         self.simulation_running = False
