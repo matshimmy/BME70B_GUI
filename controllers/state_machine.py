@@ -34,14 +34,14 @@ class StateMachine(QObject):
     # --------------------------------------------------------------------------
     # SYSTEM CHECK
     # --------------------------------------------------------------------------
-    def do_system_check_connection(self):
-        self.model.check_connection()
+    def do_system_check_connection(self, success: bool):
+        self.model.check_connection(success)
 
     def do_system_check_power(self):
         self.model.check_power()
 
-    def do_system_test_transmission(self):
-        self.model.test_transmission()
+    def do_system_test_transmission(self, transmission_ok: bool):
+        self.model.test_transmission(transmission_ok)
 
     def do_system_check_done(self):
         self.transition_to(AppState.MODE_SELECTION)
@@ -82,14 +82,17 @@ class StateMachine(QObject):
     def transition_to_simulation_options(self):
         self.transition_to(AppState.SIMULATION_OPTIONS)
 
-    def start_simulation(self):
+    def transition_to_running_simulation(self):
+        """Transition to the running simulation state"""
         self.transition_to(AppState.RUNNING_SIMULATION)
 
-    def toggle_simulation(self):
-        self.model.simulation_running = not self.model.simulation_running
+    def start_simulation(self):
+        """Start the simulation and update the model"""
+        self.model.simulation_running = True
         self.model.model_changed.emit()
 
     def stop_simulation(self):
+        """Stop the simulation and update the model"""
         self.model.simulation_running = False
         self.model.model_changed.emit()
 

@@ -1,111 +1,112 @@
+#include "MCP_DAC.h"  // DAC
+
 int sampFreq;
 int sig;
-bool streaming = false;
+bool simulation_mode = false;   // Flag for simulation mode
+bool acquisition_mode = false;  // Flag for acquisition mode
+bool template_mode = false;     // Flag for template mode
 
 int acqOutput = A7;
 int digControl = 8;
 int acqDig = 0;
 float voltage = 0.00;
 
+int simOut = A6;
+MCP4921 DAC_pin;  // DAC
+
 bool systemCheck = false;
+
+// Variables for sine wave generation
+float freq;
+float sinArgIncrement;
+float sinArg = 0.0;
 
 void setup() {
   Serial.begin(9600);
   pinMode(digControl, OUTPUT);
   pinMode(acqOutput, INPUT);
+  DAC_pin.begin(10);  // CS pin is D10 // DAC
 }
 
 void loop() {
-  if (systemCheck == false) {
-    // Serial.println(1);
+  if (Serial.available()) {
+    // get PC command
+    String checkCommand = Serial.readStringUntil('\n');
 
-    // if (Serial.available()) {
-    //   // get PC response
-    //   int received = Serial.parseInt();
-    //   if (received == true) {
-    //     systemCheck = true;
-    //   }
-    //   else {
-    //     Serial.println("Incomplete test");
-    //   }
+    // remove whitespace, \n, carriage returns etc.
+    checkCommand.trim();
 
-    // }
+    // Send acknowledgment that we received the command
+    Serial.println("ACK");
 
-    if (Serial.available()) {
-      // get PC commadn
-      String checkCommand = Serial.readStringUntil('\n');
-
-      // remove whitesapce, \n, carriage returns etc.
-      checkCommand.trim();
-
-      if(checkCommand.startsWith("CHECK POWER")) {
-        // start reading integer from index 11 onwards
-        Serial.println("POWER:50");
-        // delay(1000);
-      } else if(checkCommand.startsWith("TEST TRANSMISSION")) {
+    if (simulation_mode) {
+      // In simulation mode, treat numeric data as a command
+      float value = checkCommand.toFloat();
+      if (value != 0.0 || checkCommand == "0") {  // Check if valid number
+        // Output the value to DAC
+        DAC_pin.write(value);
         Serial.println("OK");
-        // delay(1000);
+        return;  // Skip further command processing
       }
+    }
+
+    if (checkCommand.startsWith("CHECK POWER")) {
+      // start reading integer from index 11 onwards
+      // USB always 100
+      Serial.println("POWER:100");
+      digitalWrite(digControl, LOW);
+    } else if (checkCommand.startsWith("TEST TRANSMISSION")) {
+      Serial.println("OK");
+    } else if (checkCommand.startsWith("SET SAMPLE")) {
+      // Handle sampling rate command (only needed for acquisition mode)
+      sampFreq = checkCommand.substring(10).toInt();
+    } else if (checkCommand.startsWith("SET FREQ")) {
+      // Handle frequency command
+      freq = checkCommand.substring(9).toInt();
+      // calculate the sine increment based on the obtained values from pc
+      sinArgIncrement = 2 * PI * (freq / sampFreq);
+    } else if (checkCommand == "START SIM") {
+      digitalWrite(digControl, HIGH);
+      simulation_mode = true;    // Simulation mode
+      acquisition_mode = false;  // Not acquisition mode
+      Serial.println("SIMULATION STARTED");  // Keep this as it's a critical state change
+    } else if (checkCommand == "START ACQ") {
+      digitalWrite(digControl, HIGH);
+      simulation_mode = false;  // Not simulation mode
+      acquisition_mode = true;  // Acquisition mode
+      sinArg = 0.0;             // Reset sine wave phase
+      Serial.println("ACQUISITION STARTED");  // Keep this as it's a critical state change
+    } else if (checkCommand == "STOP") {
+      simulation_mode = false;
+      acquisition_mode = false;
+      template_mode = false;
+      Serial.println("STOPPED");  // Keep this as it's a critical state change
+    } else if (checkCommand == "SET TEMPLATE TRUE") {
+      template_mode = true;
+      Serial.println("OK");
+    } else if (checkCommand == "SET TEMPLATE FALSE") {
+      template_mode = false;
+      Serial.println("OK");
     }
   }
 
-  // if (Serial.available()) {
-  //   // get PC commadn
-  //   String command = Serial.readStringUntil('\n');
+  // Handle acquisition mode data
+  if (acquisition_mode) {
+    // Acquisition mode - send sine wave data with delay
+    float sineValue = sin(sinArg);
+    int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
+    adcValue = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
 
-  //   // remove whitesapce, \n, carriage returns etc.
-  //   command.trim();
+    // Send only the sine wave value
+    Serial.println(sineValue);
 
-  //   if (command.startsWith("SET SAMPLE ")) {
-  //     // start reading integer from index 11 onwards
-  //     sampFreq = command.substring(11).toInt();
-  //     Serial.print("Sampling freq =  ");
-  //     Serial.println(sampFreq);
-  //     delay(3000);
-  //   }
+    // Increment sine wave argument
+    sinArg += sinArgIncrement;
+    if (sinArg > 2 * PI) {
+      sinArg -= 2 * PI;
+    }
 
-
-  //   else if (command.startsWith("SET SIG ")) {
-  //     // start reading float from index 9 onwards
-  //     sig = command.substring(8).toInt();
-
-  //     if (sig == 0) {
-  //       Serial.println("Signal = ECG");
-  //       digitalWrite(digControl, LOW);
-  //       delay(3000);
-  //     }
-
-  //     else if (sig == 1) {
-  //       Serial.println("Signal = EMG");
-  //       digitalWrite(digControl, HIGH);
-  //       delay(3000);
-  //     }
-
-  //     delay(3000);
-  //   }
-
-  //   // start streaming
-  //   else if (command == "START") {
-  //     streaming = true;
-  //     Serial.println("Streaming started");
-  //   }
-  //   // stop streaming
-  //   else if (command == "STOP") {
-  //     streaming = false;
-  //     Serial.println("Streaming stopped");
-  //   }
-  // }
-
-  // // if streaming started
-  // if (streaming) {
-  //   analogReadResolution(12);
-  //   acqDig = analogRead(acqOutput);
-
-  //   voltage = acqDig * (3.3 / 4095);
-
-  //   Serial.println(voltage);
-
-  //   // 1/fs
-  //   delayMicroseconds(1000000 / sampFreq);
-  // }
+    // Wait for next sample
+    delayMicroseconds(1000000 / sampFreq);
+  }
 }

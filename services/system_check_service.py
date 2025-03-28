@@ -1,14 +1,14 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QThread, QTimer, QEventLoop
-import time
 from enums.connection_type import ConnectionType
 from services.connection_interface import ConnectionFactory
 from models.model import Model
+from services.usb_connection import USBConnection
 
 class SystemCheckService(QObject):
     """
     Worker dedicated to running the system check in a separate thread.
     """
-    connection_checked = pyqtSignal()
+    connection_checked = pyqtSignal(bool)
     power_checked = pyqtSignal(int)  # Now includes power level
     transmission_checked = pyqtSignal(bool)  # Now includes success status
     finished = pyqtSignal()
@@ -43,7 +43,19 @@ class SystemCheckService(QObject):
 
         # Create the appropriate connection interface
         try:
-            self.connection = ConnectionFactory.create_connection(self.connection_type)
+            if self.connection_type == ConnectionType.USB:
+                # For USB, first scan for available Arduino ports
+                arduino_ports = USBConnection.scan_for_arduino()
+                
+                if not arduino_ports:
+                    self.error.emit("No Arduino devices found on any COM port")
+                    self.connection_checked.emit(False)
+                    return
+                
+                # Try to connect to the first found Arduino port
+                self.connection = USBConnection(port=arduino_ports[0])
+            else:
+                self.connection = ConnectionFactory.create_connection(self.connection_type)
         except Exception as e:
             self.error.emit(f"Failed to create connection: {str(e)}")
             return
@@ -55,15 +67,30 @@ class SystemCheckService(QObject):
         print(f"Connecting via {self.connection_type.name}...")
         if self.connection.connect():
             print("Connection successful")
-            self.connection_checked.emit()
+            self.connection_checked.emit(True)
             
             # Add delay to allow the UI to update and show success
             self.delay(self.STEP_DELAY)
         else:
             self.error.emit(f"Failed to connect via {self.connection_type.name}")
+            self.connection_checked.emit(False)
             return
 
-        # 2) Power check
+        # 2) Transmission check
+        if QThread.currentThread().isInterruptionRequested():
+            return
+            
+        print("Testing transmission...")
+        transmission_ok = self.connection.test_transmission()
+        self.transmission_checked.emit(transmission_ok)
+        if not transmission_ok:
+            self.error.emit("Failed to test transmission")
+            return
+        
+        # Add delay to allow the UI to update and show success
+        self.delay(self.STEP_DELAY)
+
+        # 3) Power check
         if QThread.currentThread().isInterruptionRequested():
             return
             
@@ -80,20 +107,6 @@ class SystemCheckService(QObject):
         else:
             self.error.emit("Failed to check power level")
             return
-
-        # 3) Transmission check
-        if QThread.currentThread().isInterruptionRequested():
-            return
-            
-        print("Testing transmission...")
-        transmission_ok = self.connection.test_transmission()
-        # print(transmission_ok)
-        if self.model:
-            self.model.transmission_ok = transmission_ok
-        self.transmission_checked.emit(transmission_ok)
-        
-        # Add delay to allow the UI to update and show success
-        self.delay(self.STEP_DELAY)
         
         # Complete
         if not QThread.currentThread().isInterruptionRequested():

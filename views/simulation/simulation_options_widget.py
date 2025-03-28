@@ -224,7 +224,7 @@ class SimulationOptionsWidget(BaseWidget):
         else:
             # Either Template mode or CSV is provided
             self.start_button.setEnabled(True)
-            self.start_button.setText("Start")
+            self.start_button.setText("Next")
             self.start_button.setObjectName("greenButton")
 
         self._update_button_style(self.start_button)
@@ -272,7 +272,8 @@ class SimulationOptionsWidget(BaseWidget):
             self.signal_simulation.load_csv_data(self.custom_signal_file, transmission_rate)
 
         self.model.set_simulation_type(simulation_type)
-        self.device_controller.start_simulation()
+        # Just transition to the running simulation widget without starting simulation
+        self.state_machine.transition_to_running_simulation()
 
     def reset_ui(self):
         pass

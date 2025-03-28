@@ -64,21 +64,24 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central_widget)
         layout.addWidget(self.stacked_widget)
 
-        # DEBUG: set state and model for running acquisition development
-        # from enums.connection_type import ConnectionType
-        # self.state_machine.model.connection_type = ConnectionType.USB
-        # self.state_machine.model.is_connected = True
-        # self.state_machine.model.power_level = 100
-        # self.state_machine.model.transmission_ok = True
-        # self.state_machine.transition_to(AppState.ACQUISITION_OPTIONS)
-
         # DEBUG: set state and model for running simulation development
         # from enums.connection_type import ConnectionType
-        # self.state_machine.model.connection_type = ConnectionType.USB
-        # self.state_machine.model.is_connected = True
-        # self.state_machine.model.power_level = 100
-        # self.state_machine.model.transmission_ok = True
-        # self.state_machine.transition_to(AppState.SIMULATION_OPTIONS)
+        # from enums.connection_status import ConnectionStatus
+        # from services.usb_connection import USBConnection
+        
+        # # Create a USB connection directly
+        # self.device_controller.active_connection = USBConnection(port='COM4')  # Adjust port as needed
+        # if self.device_controller.active_connection.connect():
+        #     # Set up the model state
+        #     self.state_machine.model.connection_type = ConnectionType.USB
+        #     self.state_machine.model.connection_status = ConnectionStatus.CONNECTED
+        #     self.state_machine.model.power_level = 100
+        #     self.state_machine.model.transmission_ok = True
+            
+        #     # Transition directly to simulation options
+        #     self.state_machine.transition_to(AppState.SIMULATION_OPTIONS)
+        # else:
+        #     print("Failed to create debug connection")
 
 
     def on_state_changed(self, new_state):

@@ -2,9 +2,9 @@ from PyQt5.QtCore import QThread
 from services.system_check_service import SystemCheckService
 from services.graceful_disconnect_service import GracefulDisconnectService
 from services.acquisition_service import AcquisitionService
+from services.simulation_service import SimulationService
 from controllers.state_machine import StateMachine
-from services.connection_interface import ConnectionFactory
-
+from services.usb_connection import USBConnection
 from enums.connection_type import ConnectionType
 
 class DeviceController:
@@ -58,6 +58,14 @@ class DeviceController:
         self.acquisitionService = None
         self.acquisition_running = False
 
+        # ----------------------------------------------------------------
+        # Simulation Thread & Service
+        # ----------------------------------------------------------------
+        self.simulationThread = QThread()
+        # We'll create the simulation service when needed with the active connection
+        self.simulationService = None
+        self.simulation_running = False
+
     # --------------------------------------------------------------------------
     # SYSTEM CHECK TASK
     # --------------------------------------------------------------------------
@@ -85,11 +93,13 @@ class DeviceController:
             self.systemCheckThread.wait()
             # Return to idle state
             self.state_machine.disconnect_device()
-            self.active_connection = None
+        else:
+            self.state_machine.disconnect_device()
+        self.active_connection = None
 
-    def handle_connect_checked(self):
+    def handle_connect_checked(self, success: bool):
         """Handle when connection check is complete"""
-        self.state_machine.do_system_check_connection()
+        self.state_machine.do_system_check_connection(success)
 
     def handle_power_checked(self, power_level: int):
         """Handle when power check is complete"""
@@ -99,7 +109,7 @@ class DeviceController:
     def handle_transmission_checked(self, transmission_ok: bool):
         """Handle when transmission check is complete"""
         # Update the model with the transmission status
-        self.state_machine.do_system_test_transmission()
+        self.state_machine.do_system_test_transmission(transmission_ok)
 
     def handle_system_check_done(self):
         """Handle when the system check is complete"""
@@ -118,9 +128,7 @@ class DeviceController:
         # Clean up the thread
         self.systemCheckThread.quit()
         self.systemCheckThread.wait()
-        # Return to idle state
-        self.state_machine.disconnect_device()
-        self.active_connection = None
+        # Don't transition to IDLE - let user click abort to do that
 
     # --------------------------------------------------------------------------
     # GRACEFUL DISCONNECT TASK
@@ -234,7 +242,7 @@ class DeviceController:
     def stop_acquisition(self):
         """Stop the acquisition process"""
         if self.acquisition_running:
-            self.acquisitionService.stop()
+            # Request interruption and quit the thread
             self.acquisitionThread.requestInterruption()
             self.acquisitionThread.quit()
             self.acquisitionThread.wait()
@@ -263,10 +271,71 @@ class DeviceController:
     # SIMULATION TASK
     # --------------------------------------------------------------------------
     def start_simulation(self):
-        self.state_machine.start_simulation()
+        """Start the simulation process"""
+        if self.active_connection is None:
+            print("Error: No active connection available")
+            return
+            
+        if not isinstance(self.active_connection, USBConnection):
+            print("Error: Simulation only supports USB connections")
+            return
+            
+        if not self.simulation_running:
+            self.simulation_running = True
+            
+            # Set up the device controller in the signal simulation model first
+            self.state_machine.model.signal_simulation.set_device_controller(self)
+            
+            # Create the simulation service with the active connection
+            self.simulationService = SimulationService(self.state_machine.model, self.active_connection)
+            
+            # Move the service to the simulationThread
+            self.simulationService.moveToThread(self.simulationThread)
+            
+            # Connect the thread's started signal to run_simulation
+            self.simulationThread.started.connect(self.simulationService.run_simulation)
+            
+            # Connect service signals
+            self.simulationService.finished.connect(self.handle_simulation_finished)
+            self.simulationService.error.connect(self.handle_simulation_error)
+            self.simulationService.ready.connect(self.handle_simulation_ready)  # Connect to ready signal
+            
+            # Start the thread
+            self.simulationThread.start()
 
     def stop_simulation(self):
-        self.state_machine.stop_simulation()
+        """Stop the simulation process"""
+        if self.simulation_running:
+            # Request interruption and quit the thread
+            self.simulationThread.requestInterruption()
+            self.simulationThread.quit()
+            self.simulationThread.wait()
+            self.simulation_running = False
+            
+            # Update the state machine
+            self.state_machine.stop_simulation()
+
+    def handle_simulation_finished(self):
+        """Handle simulation completion"""
+        self.simulation_running = False
+        self.simulationThread.quit()
+        self.simulationThread.wait()
+        
+    def handle_simulation_error(self, error_message):
+        """Handle simulation errors"""
+        print(f"Simulation error: {error_message}")
+        self.stop_simulation()
+
+    def handle_simulation_ready(self):
+        """Handle when simulation service is ready"""
+        # Update the state machine after service is ready
+        self.state_machine.start_simulation()
+
+    def send_simulation_data(self, data):
+        """Send data to the simulation service"""
+        if self.simulationService and self.simulation_running:
+            return self.simulationService.send_data(data)
+        return False
 
     # --------------------------------------------------------------------------
     # OTHER DEVICE TASKS (ACQUISITION, STIMULATION)

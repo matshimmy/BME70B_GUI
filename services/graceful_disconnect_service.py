@@ -29,23 +29,21 @@ class GracefulDisconnectService(QObject):
         if QThread.currentThread().isInterruptionRequested():
             return
             
-        print("Ending connection...")
         try:
             # Send a command to prepare for disconnect, if your protocol supports it
-            self.connection.send_command("PREPARE DISCONNECT")
+            # self.connection.send_command("PREPARE DISCONNECT")
             self.disconnect_conn_done.emit()
         except Exception as e:
             print(f"Error during connection shutdown: {e}")
-            self.disconnect_conn_done.emit()  # Still emit signal to continue the process
+            self.disconnect_conn_done.emit()
 
         # 2) Power down sequence
         if QThread.currentThread().isInterruptionRequested():
             return
         
-        print("Powering down...")
         try:
             # Send power down command if your protocol supports it
-            self.connection.send_command("POWER DOWN")
+            # self.connection.send_command("POWER DOWN")
             self.disconnect_power_done.emit()
         except Exception as e:
             print(f"Error during power down: {e}")
@@ -55,10 +53,9 @@ class GracefulDisconnectService(QObject):
         if QThread.currentThread().isInterruptionRequested():
             return
             
-        print("Ending transmission...")
         try:
             # Send end transmission command if your protocol supports it
-            self.connection.send_command("END TRANSMISSION")
+            # self.connection.send_command("END TRANSMISSION")
             self.disconnect_trans_done.emit()
         except Exception as e:
             print(f"Error during transmission shutdown: {e}")
@@ -66,10 +63,8 @@ class GracefulDisconnectService(QObject):
             
         # Final disconnect and cleanup
         if not QThread.currentThread().isInterruptionRequested():
-            print("Finalizing disconnect...")
             try:
                 self.connection.disconnect()
-                print("Disconnect complete")
             except Exception as e:
                 print(f"Error during final disconnect: {e}")
             
