@@ -4,7 +4,7 @@ from services.graceful_disconnect_service import GracefulDisconnectService
 from services.acquisition_service import AcquisitionService
 from services.simulation_service import SimulationService
 from controllers.state_machine import StateMachine
-
+from services.usb_connection import USBConnection
 from enums.connection_type import ConnectionType
 
 class DeviceController:
@@ -274,6 +274,10 @@ class DeviceController:
         """Start the simulation process"""
         if self.active_connection is None:
             print("Error: No active connection available")
+            return
+            
+        if not isinstance(self.active_connection, USBConnection):
+            print("Error: Simulation only supports USB connections")
             return
             
         if not self.simulation_running:

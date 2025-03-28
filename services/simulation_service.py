@@ -2,14 +2,14 @@ from PyQt5.QtCore import QObject, pyqtSignal, QThread
 import time
 
 from models.model import Model
-from services.connection_interface import ConnectionInterface
+from services.usb_connection import USBConnection
 from enums.simulation_type import SimulationType
 
 class SimulationService(QObject):
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
-    def __init__(self, model: Model, connection: ConnectionInterface):
+    def __init__(self, model: Model, connection: USBConnection):
         super().__init__()
         self.model = model
         self.connection = connection
