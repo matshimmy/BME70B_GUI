@@ -82,7 +82,7 @@ class RunningAcquisitionWidget(BaseWidget):
         x_range_layout.addWidget(self.x_range_label)
 
         self.x_range_spinbox = QSpinBox()
-        self.x_range_spinbox.setRange(5, 60)
+        self.x_range_spinbox.setRange(1, 60)
         self.x_range_spinbox.valueChanged.connect(self.update_graph)
         x_range_layout.addWidget(self.x_range_spinbox)
 

@@ -47,7 +47,7 @@ class AcquisitionOptionsWidget(BaseWidget):
         self.sampling_label.setAlignment(Qt.AlignCenter)
 
         self.combo_sampling = QComboBox()
-        self.combo_sampling.addItems(["5 Hz", "30 Hz", "100 Hz", "250 Hz", "500 Hz"])
+        self.combo_sampling.addItems(["5 Hz", "30 Hz", "100 Hz", "250 Hz", "500 Hz", "1000 Hz", "2000 Hz"])
         self.combo_sampling.setCurrentIndex(3)
 
         sampling_layout = QHBoxLayout()

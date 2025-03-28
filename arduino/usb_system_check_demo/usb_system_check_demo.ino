@@ -98,21 +98,31 @@ void loop() {
 
   // Handle acquisition mode data
   if (acquisition_mode) {
-    // Acquisition mode - send sine wave data with delay
-    float sineValue = sin(sinArg);
-    int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
-    adcValue = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
+    // // Acquisition mode - send sine wave data with delay
+    // float sineValue = sin(sinArg);
+    // int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
+    // adcValue = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
 
-    // Send only the sine wave value
-    Serial.println(sineValue);
+    // // Send only the sine wave value
+    // Serial.println(sineValue);
 
-    // Increment sine wave argument
-    sinArg += sinArgIncrement;
-    if (sinArg > 2 * PI) {
-      sinArg -= 2 * PI;
-    }
+    // // Increment sine wave argument
+    // sinArg += sinArgIncrement;
+    // if (sinArg > 2 * PI) {
+    //   sinArg -= 2 * PI;
+    // }
 
-    // Wait for next sample
+    // // Wait for next sample
+    // delayMicroseconds(1000000 / sampFreq);
+
+    analogReadResolution(12);
+    acqDig = analogRead(acqOutput);
+
+    voltage = acqDig * (3.3 / 4095);
+
+    Serial.println(voltage);
+
+    // 1/fs
     delayMicroseconds(1000000 / sampFreq);
   }
 }
