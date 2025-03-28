@@ -20,7 +20,7 @@ class DataGenerationThread(QThread):
         self._last_send_time = 0
         self._last_buffer_time = 0
         self._device_controller = None
-        self._paused = False
+        self._paused = True
         self._model = model  # Store the main model reference
 
     def set_data(self, time_data, signal_data, template_mode=False, template_data=None):
@@ -80,7 +80,7 @@ class DataGenerationThread(QThread):
 
     def stop(self):
         self._running = False
-        self._paused = False
+        self._paused = True
 
 class SignalSimulationModel(QObject):
     simulation_chunk_ready = pyqtSignal()

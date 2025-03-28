@@ -140,8 +140,7 @@ class RunningSimulationWidget(BaseWidget):
     #  Slots: Pause/Resume, Update Graph, Disconnect, etc.
     # -------------------------------------------------------------------------
     def toggle_simulation(self):
-        print("model.simulation_running", self.model.simulation_running)
-        if not self.model.simulation_running:
+        if self.signal_simulation._generation_thread._paused:
             # Start device simulation first
             self.device_controller.start_simulation()
             if self.model.simulation_type == SimulationType.TEMPLATE:
