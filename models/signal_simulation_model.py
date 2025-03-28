@@ -7,10 +7,6 @@ class DataGenerationThread(QThread):
     data_ready = pyqtSignal(float)  # Signal for sending data to device
     buffer_ready = pyqtSignal()     # Signal for updating visualization
     
-    # Class variable to store the device controller
-    _device_controller = None
-    _paused = False
-
     def __init__(self, parent=None):
         super().__init__(parent)
         self._running = False
@@ -23,6 +19,8 @@ class DataGenerationThread(QThread):
         self._template_data = None
         self._last_send_time = 0
         self._last_buffer_time = 0
+        self._device_controller = None
+        self._paused = False
 
     def set_data(self, time_data, signal_data, template_mode=False, template_data=None):
         self._time_data = time_data
@@ -36,19 +34,16 @@ class DataGenerationThread(QThread):
         self._transmission_rate = rate
         self._buffer_size = rate
 
-    def set_device_controller(self, controller):
-        DataGenerationThread._device_controller = controller
-
     def pause(self):
-        DataGenerationThread._paused = True
+        self._paused = True
 
     def resume(self):
-        DataGenerationThread._paused = False
+        self._paused = False
 
     def run(self):
         self._running = True
         while self._running:
-            if DataGenerationThread._paused:
+            if self._paused:
                 time.sleep(0.1)
                 continue
 
@@ -66,8 +61,8 @@ class DataGenerationThread(QThread):
                     value = self._signal_data[self._current_index]
 
                 # Send data point directly to device if controller is available
-                if DataGenerationThread._device_controller:
-                    DataGenerationThread._device_controller.send_simulation_data(value)
+                if self._device_controller:
+                    self._device_controller.send_simulation_data(value)
                 
                 # Update visualization buffer
                 if self._current_index % self._buffer_size == 0:
@@ -80,7 +75,7 @@ class DataGenerationThread(QThread):
 
     def stop(self):
         self._running = False
-        DataGenerationThread._paused = False
+        self._paused = False
 
 class SignalSimulationModel(QObject):
     simulation_chunk_ready = pyqtSignal()
@@ -133,7 +128,7 @@ class SignalSimulationModel(QObject):
         self._template_data = None
 
     def set_device_controller(self, controller):
-        DataGenerationThread._device_controller = controller
+        self._generation_thread._device_controller = controller
 
     def set_artifacts(self, muscle: bool, random_movement: bool, sixty_hz: bool):
         """Set which artifacts to include in the simulation"""
