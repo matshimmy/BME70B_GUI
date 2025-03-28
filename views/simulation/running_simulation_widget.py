@@ -140,6 +140,7 @@ class RunningSimulationWidget(BaseWidget):
     #  Slots: Pause/Resume, Update Graph, Disconnect, etc.
     # -------------------------------------------------------------------------
     def toggle_simulation(self):
+        print("model.simulation_running", self.model.simulation_running)
         if not self.model.simulation_running:
             # Start device simulation first
             self.device_controller.start_simulation()
@@ -155,25 +156,14 @@ class RunningSimulationWidget(BaseWidget):
             self.simulation_button.setObjectName("amberButton")
             self.back_button.setEnabled(False)
         else:
-            # Check if we're currently paused
-            if self.simulation_button.text() == "Resume Simulation":
-                # Resume simulation
-                self.signal_simulation.resume_simulation()
-                self.simulation_button.setText("Pause Simulation")
-                self.simulation_status_label.setText("Transferring...")
-                self.simulation_button.setObjectName("amberButton")
-                self.back_button.setEnabled(False)
-                if self.model.simulation_type == SimulationType.TEMPLATE:
-                    self.template_editor.enable_editing(False)
-            else:
-                # Pause simulation
-                self.signal_simulation.pause_simulation()
-                self.simulation_button.setText("Resume Simulation")
-                self.simulation_status_label.setText("Signal")
-                self.simulation_button.setObjectName("greenButton")
-                self.back_button.setEnabled(True)
-                if self.model.simulation_type == SimulationType.TEMPLATE:
-                    self.template_editor.enable_editing(True)
+            # If simulation is running, pause it
+            self.signal_simulation.pause_simulation()
+            self.simulation_button.setText("Resume Simulation")
+            self.simulation_status_label.setText("Signal")
+            self.simulation_button.setObjectName("greenButton")
+            self.back_button.setEnabled(True)
+            if self.model.simulation_type == SimulationType.TEMPLATE:
+                self.template_editor.enable_editing(True)
 
         self._update_button_style(self.simulation_button)
 
