@@ -30,6 +30,10 @@ class DataGenerationThread(QThread):
         self._template_data = template_data
         self._current_index = 0
         self._last_send_time = time.time()
+        if template_mode:
+            self._buffer_size = len(template_data)
+        else:
+            self._buffer_size = self._transmission_rate
 
     def set_transmission_rate(self, rate):
         self._transmission_rate = rate
