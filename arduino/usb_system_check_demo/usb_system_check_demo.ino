@@ -46,10 +46,18 @@ void loop() {
         String valueStr = checkCommand.substring(5);  // Skip "DATA:"
         valueStr.trim();  // Remove any whitespace
         
-        // Convert to float and output to DAC
-        float value = valueStr.toFloat();
-        DAC_pin.write(value);
-        Serial.println("OK");
+        // Convert to float voltage value
+        float voltage = valueStr.toFloat();
+        
+        // Shift voltage from -1.65V to +1.65V range to 0V to 3.3V range
+        voltage = voltage + 1.65;  // Add 1.65V to shift the range up
+        
+        // Convert voltage (0-3.3V) to DAC value (0-4095)
+        uint16_t dacValue = (voltage * 4095) / 3.3;
+        dacValue = constrain(dacValue, 0, 4095);  // Ensure it's within valid range
+        
+        DAC_pin.write(dacValue);
+        Serial.println(dacValue);  // Send back the DAC value for verification
         return;  // Skip further command processing
       }
     }

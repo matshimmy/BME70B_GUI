@@ -52,7 +52,14 @@ class SimulationService(QObject):
             if "ERROR" in response:
                 print(f"SimulationService: Error response from device: {response}")  # Debug print
                 return False
-            return "OK" in response
+            
+            # Try to convert response to integer and verify it's in valid range
+            try:
+                dac_value = int(response)
+                return 0 <= dac_value <= 4095
+            except ValueError:
+                print(f"SimulationService: Invalid response format: {response}")  # Debug print
+                return False
             
         except Exception as e:
             print(f"SimulationService: Error sending data: {e}")  # Debug print
