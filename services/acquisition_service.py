@@ -3,6 +3,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QThread
 
 from models.model import Model
 from services.connection_interface import ConnectionInterface
+from services.bluetooth_connection import BluetoothConnection
 
 class AcquisitionService(QObject):
     chunk_received = pyqtSignal(object)
@@ -26,8 +27,10 @@ class AcquisitionService(QObject):
         sampling_freq = str(self.model.sampling_rate)
         response = self.connection.send_command(f"SET SAMPLE {sampling_freq}")
         
-        # for sine wave
-        response = self.connection.send_command("SET FREQ 1")
+        # bandpass filter
+        response = self.connection.send_command(f"SET CIRC {self.model.circuit_id}")
+        if isinstance(self.connection, BluetoothConnection):
+            print(f"response: {response}")
 
     def start_acquisition(self):
         """Start the acquisition process"""

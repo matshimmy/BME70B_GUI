@@ -74,7 +74,7 @@ void loop() {
     } else if (checkCommand.startsWith("SET SAMPLE")) {
       // Handle sampling rate command (only needed for acquisition mode)
       sampFreq = checkCommand.substring(10).toInt();
-    } else if (checkCommand.startsWith("SET FREQ")) {
+    } else if (checkCommand.startsWith("SET CIRC")) {
       // Handle frequency command
       freq = checkCommand.substring(9).toInt();
       // calculate the sine increment based on the obtained values from pc

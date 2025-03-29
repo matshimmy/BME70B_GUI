@@ -100,6 +100,7 @@ class Model(QObject):
         # Acquisition
         self.get_template = None
         self.sampling_rate = None
+        self.circuit_id = None
         self.acquisition_running = False
 
         # Simulation

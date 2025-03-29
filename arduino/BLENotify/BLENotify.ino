@@ -140,8 +140,9 @@ String processCommand(String command) {
     packetInterval = sampleInterval * 6;
     return "Sampling rate set";
   } 
-  else if (command.startsWith("SET FREQ")) {
-    freq = command.substring(9).toFloat();
+  else if (command.startsWith("SET CIRC")) {
+    // freq = command.substring(9).toFloat();
+    freq = 1;
     sinArgIncrement = 2.0f * PI * (freq / sampFreq);
     return "Frequency set";
   } 

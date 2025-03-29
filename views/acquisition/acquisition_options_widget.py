@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem, 
-    QSizePolicy, QLabel, QComboBox, QCheckBox
+    QSizePolicy, QLabel, QComboBox, QCheckBox, QRadioButton,
+    QButtonGroup
 )
 from PyQt5.QtCore import Qt
 
@@ -56,6 +57,31 @@ class AcquisitionOptionsWidget(BaseWidget):
         sampling_layout.addWidget(self.combo_sampling)
         options_layout.addLayout(sampling_layout)
 
+        # ---------------------------
+        # Radio Buttons for Circuit Selection
+        # ---------------------------
+        circuit_label = QLabel("Bandpass Filter:")
+        circuit_label.setAlignment(Qt.AlignCenter)
+        options_layout.addWidget(circuit_label)
+
+        circuit_layout = QHBoxLayout()
+        circuit_layout.setAlignment(Qt.AlignCenter)
+
+        self.circuit0_radio = QRadioButton("ECG Circuit")
+        self.circuit1_radio = QRadioButton("EMG Circuit")
+
+        # Default to Circuit 0
+        self.circuit0_radio.setChecked(True)
+
+        circuit_layout.addWidget(self.circuit0_radio)
+        circuit_layout.addWidget(self.circuit1_radio)
+        options_layout.addLayout(circuit_layout)
+
+        # Group the radio buttons
+        self.circuit_group = QButtonGroup()
+        self.circuit_group.addButton(self.circuit0_radio, 0)
+        self.circuit_group.addButton(self.circuit1_radio, 1)
+
         main_layout.addLayout(options_layout)
 
         # Spacer below the buttons
@@ -86,7 +112,7 @@ class AcquisitionOptionsWidget(BaseWidget):
         sampling_rate = float(sampling_rate_str.split()[0])
 
         # Update state machine
-        self.state_machine.update_acquisition_options(self.template_checkbox.isChecked(), sampling_rate)
+        self.state_machine.update_acquisition_options(self.template_checkbox.isChecked(), sampling_rate, self.circuit_group.checkedId())
 
         # Finally start the acquisition
         self.device_controller.start_acquisition()

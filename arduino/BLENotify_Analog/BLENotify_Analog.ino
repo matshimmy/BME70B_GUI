@@ -164,7 +164,7 @@ String processCommand(const String& commandIn) {
     packetInterval = sampleInterval * 6;
     return "Sampling rate set";
   }
-  else if (command.startsWith("SET FREQ")) {
+  else if (command.startsWith("SET CIRC")) {
     // Re-purposed to toggle digital pin
     int sig = command.substring(8).toInt();
     if (sig == 0) {
