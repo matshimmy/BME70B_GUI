@@ -117,5 +117,4 @@ class Model(QObject):
 
         # Stimulation
         self.stimulation_frequency = None
-        self.stimulation_pulse_width = None
-        self.stimulation_current = None
+        self.stimulation_duty_cycle = None

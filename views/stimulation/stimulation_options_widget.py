@@ -55,38 +55,20 @@ class StimulationOptionsWidget(BaseWidget):
         # Horizontal spacer
         options_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         # ---------------------------
-        # Drop-down (ComboBox) for Pulse Width
+        # Drop-down (ComboBox) for Duty Cycle
         # ---------------------------
-        self.pulse_width_label = QLabel("Pulse Width:")
-        self.pulse_width_label.setAlignment(Qt.AlignCenter)
+        self.duty_cycle_label = QLabel("Duty Cycle:")
+        self.duty_cycle_label.setAlignment(Qt.AlignCenter)
 
-        self.combo_pulse_width = QComboBox()
-        self.combo_pulse_width.addItems([f"{i} µs" for i in range(200, 501, 100)])
-        self.combo_pulse_width.setCurrentIndex(1)  # default "300 µs"
+        self.combo_duty_cycle = QComboBox()
+        self.combo_duty_cycle.addItems([f"{i} %" for i in range(10, 101, 10)])
+        self.combo_duty_cycle.setCurrentIndex(1)  # default "50 %"
 
-        pulse_width_layout = QVBoxLayout()
-        pulse_width_layout.setAlignment(Qt.AlignCenter)
-        pulse_width_layout.addWidget(self.pulse_width_label)
-        pulse_width_layout.addWidget(self.combo_pulse_width)
-        options_layout.addLayout(pulse_width_layout)
-
-        # Horizontal spacer
-        options_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        # ---------------------------
-        # Drop-down (ComboBox) for Current
-        # ---------------------------
-        self.current_label = QLabel("Current:")
-        self.current_label.setAlignment(Qt.AlignCenter)
-
-        self.combo_current = QComboBox()
-        self.combo_current.addItems([f"{i} mA" for i in range(15, 61, 15)])
-        self.combo_current.setCurrentIndex(1)  # default "30 mA"
-
-        current_layout = QVBoxLayout()
-        current_layout.setAlignment(Qt.AlignCenter)
-        current_layout.addWidget(self.current_label)
-        current_layout.addWidget(self.combo_current)
-        options_layout.addLayout(current_layout)
+        duty_cycle_layout = QVBoxLayout()
+        duty_cycle_layout.setAlignment(Qt.AlignCenter)
+        duty_cycle_layout.addWidget(self.duty_cycle_label)
+        duty_cycle_layout.addWidget(self.combo_duty_cycle)
+        options_layout.addLayout(duty_cycle_layout)
 
         # Horizontal spacer
         options_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -120,16 +102,12 @@ class StimulationOptionsWidget(BaseWidget):
         # Convert "30 Hz" to integer or store the string
         frequency = int(frequency_str.split()[0])
 
-        pulse_width_str = self.combo_pulse_width.currentText()
-        # Convert "300 µs" to integer or store the string
-        pulse_width = int(pulse_width_str.split()[0])
-
-        current_str = self.combo_current.currentText()
-        # Convert "30 mA" to integer or store the string
-        current = int(current_str.split()[0])
+        duty_cycle_str = self.combo_duty_cycle.currentText()
+        # Convert "50 %" to integer or store the string
+        duty_cycle = int(duty_cycle_str.split()[0])
 
         # Update state machine
-        self.state_machine.update_stimulation_options(frequency, pulse_width, current)
+        self.state_machine.update_stimulation_options(frequency, duty_cycle)
 
         # Finally start the stimulation
         self.device_controller.start_stimulation()
