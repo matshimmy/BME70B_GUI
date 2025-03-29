@@ -125,7 +125,7 @@ class SimulationOptionsWidget(BaseWidget):
         self.transmission_label.setAlignment(Qt.AlignCenter)
 
         self.combo_transmission = QComboBox()
-        self.combo_transmission.addItems(["10 Hz", "30 Hz", "100 Hz", "200 Hz", "500 Hz", "1000 Hz", "2000 Hz"])
+        self.combo_transmission.addItems(["1 Hz", "2 Hz", "5 Hz", "10 Hz", "30 Hz", "100 Hz", "200 Hz", "500 Hz", "1000 Hz", "2000 Hz"])
         self.combo_transmission.setCurrentIndex(1)  # default "100 Hz"
 
         transmission_layout = QHBoxLayout()

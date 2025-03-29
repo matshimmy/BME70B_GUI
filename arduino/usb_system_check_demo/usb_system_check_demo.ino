@@ -63,7 +63,7 @@ void loop() {
         dacValue = constrain(dacValue, 0, 4095);  // Ensure it's within valid range
         
         DAC_pin.write(dacValue);
-        Serial.println(dacValue);  // Send back the DAC value for verification
+        // Serial.println(dacValue);  // Send back the DAC value for verification
         return;  // Skip further command processing
       }
     }
