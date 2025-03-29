@@ -36,19 +36,31 @@ void loop() {
     // remove whitespace, \n, carriage returns etc.
     checkCommand.trim();
 
-    // Send acknowledgment that we received the command
-    Serial.println("ACK");
-
     if (simulation_mode) {
-      // In simulation mode, treat numeric data as a command
-      float value = checkCommand.toFloat();
-      if (value != 0.0 || checkCommand == "0") {  // Check if valid number
-        // Output the value to DAC
-        DAC_pin.write(value);
-        Serial.println("OK");
+      // In simulation mode, check for DATA: prefix
+      if (checkCommand.startsWith("DATA:")) {
+        // Extract the numeric value after DATA:
+        String valueStr = checkCommand.substring(5);  // Skip "DATA:"
+        valueStr.trim();  // Remove any whitespace
+        
+        // Convert to float voltage value
+        float voltage = valueStr.toFloat();
+        
+        // Shift voltage from -1.65V to +1.65V range to 0V to 3.3V range
+        voltage = voltage + 1.65;  // Add 1.65V to shift the range up
+        
+        // Convert voltage (0-3.3V) to DAC value (0-4095)
+        uint16_t dacValue = (voltage * 4095) / 3.3;
+        dacValue = constrain(dacValue, 0, 4095);  // Ensure it's within valid range
+        
+        DAC_pin.write(dacValue);
+        Serial.println(dacValue);  // Send back the DAC value for verification
         return;  // Skip further command processing
       }
     }
+
+    // Send acknowledgment for all other commands
+    Serial.println("ACK");
 
     if (checkCommand.startsWith("CHECK POWER")) {
       // start reading integer from index 11 onwards
@@ -56,6 +68,8 @@ void loop() {
       Serial.println("POWER:100");
       digitalWrite(digControl, LOW);
     } else if (checkCommand.startsWith("TEST TRANSMISSION")) {
+      simulation_mode = false;
+      acquisition_mode = false;
       Serial.println("OK");
     } else if (checkCommand.startsWith("SET SAMPLE")) {
       // Handle sampling rate command (only needed for acquisition mode)
@@ -92,21 +106,31 @@ void loop() {
 
   // Handle acquisition mode data
   if (acquisition_mode) {
-    // Acquisition mode - send sine wave data with delay
-    float sineValue = sin(sinArg);
-    int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
-    adcValue = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
+    // // Acquisition mode - send sine wave data with delay
+    // float sineValue = sin(sinArg);
+    // int adcValue = (sineValue + 1.0) * 2047;  // Scale to 12-bit (0 to 4095)
+    // adcValue = constrain(adcValue, 0, 4095);  // Ensure it's within 12-bit range
 
-    // Send only the sine wave value
-    Serial.println(sineValue);
+    // // Send only the sine wave value
+    // Serial.println(sineValue);
 
-    // Increment sine wave argument
-    sinArg += sinArgIncrement;
-    if (sinArg > 2 * PI) {
-      sinArg -= 2 * PI;
-    }
+    // // Increment sine wave argument
+    // sinArg += sinArgIncrement;
+    // if (sinArg > 2 * PI) {
+    //   sinArg -= 2 * PI;
+    // }
 
-    // Wait for next sample
+    // // Wait for next sample
+    // delayMicroseconds(1000000 / sampFreq);
+
+    analogReadResolution(12);
+    acqDig = analogRead(acqOutput);
+
+    voltage = acqDig * (3.3 / 4095);
+
+    Serial.println(voltage);
+
+    // 1/fs
     delayMicroseconds(1000000 / sampFreq);
   }
 }

@@ -125,7 +125,7 @@ class SimulationOptionsWidget(BaseWidget):
         self.transmission_label.setAlignment(Qt.AlignCenter)
 
         self.combo_transmission = QComboBox()
-        self.combo_transmission.addItems(["10 Hz", "30 Hz", "100 Hz", "200 Hz", "500 Hz"])
+        self.combo_transmission.addItems(["10 Hz", "30 Hz", "100 Hz", "200 Hz", "500 Hz", "1000 Hz", "2000 Hz"])
         self.combo_transmission.setCurrentIndex(1)  # default "100 Hz"
 
         transmission_layout = QHBoxLayout()
@@ -260,16 +260,18 @@ class SimulationOptionsWidget(BaseWidget):
         random_movement = self.random_movement_checkbox.isChecked()
         sixty_hz = self.sixty_hz_checkbox.isChecked()
 
+        self.signal_simulation.reset()
         self.signal_simulation.set_artifacts(muscle, random_movement, sixty_hz)
         selected_radio_id = self.radio_group.checkedId()
         if selected_radio_id == 0:
             simulation_type = SimulationType.TEMPLATE
             self.template_model.set_transmission_rate(transmission_rate)
             self.template_model.set_duration_ms(self.template_length_spinbox.value())
-            self.signal_simulation.reset()
         else:
             simulation_type = SimulationType.FULL_SIGNAL
             self.signal_simulation.load_csv_data(self.custom_signal_file, transmission_rate)
+
+        self.signal_simulation.set_transmission_rate(transmission_rate)
 
         self.model.set_simulation_type(simulation_type)
         # Just transition to the running simulation widget without starting simulation

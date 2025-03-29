@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer, QThread
+from PyQt5.QtCore import QObject, pyqtSignal, QThread
 import time
 
 class DataGenerationThread(QThread):
@@ -30,6 +30,10 @@ class DataGenerationThread(QThread):
         self._template_data = template_data
         self._current_index = 0
         self._last_send_time = time.time()
+        if template_mode:
+            self._buffer_size = len(template_data)
+        else:
+            self._buffer_size = self._transmission_rate
 
     def set_transmission_rate(self, rate):
         self._transmission_rate = rate
@@ -52,31 +56,26 @@ class DataGenerationThread(QThread):
                 time.sleep(0.1)
                 continue
 
-            current_time = time.time()
-            elapsed = current_time - self._last_send_time
-            interval = 1.0 / self._transmission_rate
+            if self._template_mode:
+                value = self._signal_data[self._current_index % len(self._signal_data)]
+            else:
+                if self._current_index >= len(self._signal_data):
+                    self._running = False
+                    break
+                value = self._signal_data[self._current_index]
 
-            if elapsed >= interval:
-                if self._template_mode:
-                    value = self._signal_data[self._current_index % len(self._signal_data)]
-                else:
-                    if self._current_index >= len(self._signal_data):
-                        self._running = False
-                        break
-                    value = self._signal_data[self._current_index]
+            # Send data point directly to device if controller is available
+            if self._device_controller:
+                self._device_controller.send_simulation_data(value)
+            
+            # Update visualization buffer
+            if self._current_index % self._buffer_size == 0:
+                self.buffer_ready.emit()
 
-                # Send data point directly to device if controller is available
-                if self._device_controller:
-                    self._device_controller.send_simulation_data(value)
-                
-                # Update visualization buffer
-                if self._current_index % self._buffer_size == 0:
-                    self.buffer_ready.emit()
-
-                self._current_index += 1
-                self._last_send_time = current_time
-
-            time.sleep(0.01)
+            self._current_index += 1
+            
+            # Sleep for exactly the interval needed for the desired transmission rate
+            time.sleep(1.0 / self._transmission_rate)
 
     def stop(self):
         self._running = False
@@ -132,6 +131,11 @@ class SignalSimulationModel(QObject):
         self._template_mode = False
         self._template_data = None
 
+    def set_transmission_rate(self, rate):
+        self._transmission_rate = rate
+        self._buffer_size = rate
+        self._generation_thread.set_transmission_rate(rate)
+
     def set_device_controller(self, controller):
         self._generation_thread._device_controller = controller
 
@@ -185,7 +189,10 @@ class SignalSimulationModel(QObject):
         if self._template_mode:
             cycle_duration = self._time_data[-1] - self._time_data[0]
             current_cycle = self._current_transfer_index // len(self._signal_data)
-            new_time = self._time_data + (cycle_duration * current_cycle)
+            # Calculate the start time for this cycle
+            start_time = cycle_duration * current_cycle
+            # Create time array for this cycle starting from the correct time
+            new_time = np.linspace(start_time, start_time + cycle_duration, len(self._signal_data))
             new_signal = self._signal_data.copy()
         else:
             buffer_size = self._generation_thread._buffer_size
