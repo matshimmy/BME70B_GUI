@@ -47,8 +47,13 @@ class SimulationService(QObject):
         """Configure the simulation based on the model settings"""
         # Set template mode based on simulation type
         template_mode = self.model.simulation_type == SimulationType.TEMPLATE
-        template_command = "SET TEMPLATE TRUE" if template_mode else "SET TEMPLATE FALSE"
+        if template_mode:
+            template_size = len(self.model.signal_simulation._template_data)
+            template_command = f"SET TEMPLATE {template_size}"
+        else:
+            template_command = "SET TEMPLATE FALSE"
         response = self.connection.send_command(template_command)
+        print(f"response: {response}")
         if "ERROR" in response:
             raise Exception(f"Failed to configure template mode: {response}")
 

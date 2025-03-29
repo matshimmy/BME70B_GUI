@@ -21,6 +21,8 @@ float freq;
 float sinArgIncrement;
 float sinArg = 0.0;
 
+int template_size;
+
 void setup() {
   Serial.begin(9600);
   pinMode(digControl, OUTPUT);
@@ -95,12 +97,13 @@ void loop() {
       acquisition_mode = false;
       template_mode = false;
       Serial.println("STOPPED");  // Keep this as it's a critical state change
-    } else if (checkCommand == "SET TEMPLATE TRUE") {
-      template_mode = true;
-      Serial.println("OK");
     } else if (checkCommand == "SET TEMPLATE FALSE") {
       template_mode = false;
       Serial.println("OK");
+    } else if (checkCommand.startsWith("SET TEMPLATE")) {
+      template_size = checkCommand.substring(12).toInt();
+      template_mode = true;
+      Serial.println(template_size);
     }
   }
 
