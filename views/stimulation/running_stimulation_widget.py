@@ -7,6 +7,10 @@ from PyQt5.QtCore import Qt
 from views.common.base_widget import BaseWidget
 
 class RunningStimulationWidget(BaseWidget):
+    # Class-level constants for label text
+    STIMULATING_TEXT = "CAUTION: STIMULATING..."
+    READY_TEXT = "CAUTION: Pressing button below will start STIMULATION"
+
     def _setup_ui(self):
 
         # Main vertical layout
@@ -19,13 +23,13 @@ class RunningStimulationWidget(BaseWidget):
         # Spacer at the top
         main_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        self.label = QLabel("CAUTION: Pressing button below will start STIMULATION")
+        self.label = QLabel(self.READY_TEXT)
         self.label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.label)
 
         self.start_button = QPushButton("Start Stimulation")
         self.start_button.setObjectName("greenButton")  # For QSS styling
-        self.start_button.clicked.connect(self.start_stimulation)
+        self.start_button.clicked.connect(self.toggle_stimulation)
         main_layout.addWidget(self.start_button)
 
         # Spacer below the buttons
@@ -59,11 +63,42 @@ class RunningStimulationWidget(BaseWidget):
 
         return layout
     
-    def start_stimulation(self):
-        self.device_controller.start_stimulation()
+    def toggle_stimulation(self):
+        if self.model.stimulation_running:
+            self.start_button.setText("Stop Stimulation")
+            self.start_button.setObjectName("redButton")
+            self._update_button_style(self.start_button)
+            self.label.setText(self.STIMULATING_TEXT)
+
+            # Disconnect button
+            self.disconnect_button.setEnabled(False)
+            self.disconnect_button.setObjectName("greyButton")
+            self._update_button_style(self.disconnect_button)
+
+            self.back_button.setEnabled(False)
+            self.model.stimulation_running = False
+        else:
+            self.start_button.setText("Start Stimulation")
+            self.start_button.setObjectName("greenButton")
+            self._update_button_style(self.start_button)
+            self.label.setText(self.READY_TEXT)
+
+            # Disconnect button
+            self.disconnect_button.setEnabled(True)
+            self.disconnect_button.setObjectName("redButton")
+            self._update_button_style(self.disconnect_button)
+
+            self.back_button.setEnabled(True)
+            self.model.stimulation_running = True
 
     def reset_ui(self):
         pass
+
+    def _update_button_style(self, button: QPushButton):
+        """Force a style refresh for a button that changes objectName."""
+        button.style().unpolish(button)
+        button.style().polish(button)
+        button.update()
 
     # -------------------------------------------------------------------------
     #  Navigation

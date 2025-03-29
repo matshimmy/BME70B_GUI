@@ -118,3 +118,4 @@ class Model(QObject):
         # Stimulation
         self.stimulation_frequency = None
         self.stimulation_duty_cycle = None
+        self.stimulation_running = False
