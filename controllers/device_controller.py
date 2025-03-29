@@ -422,6 +422,3 @@ class DeviceController:
             self.stimulationThread.quit()
             self.stimulationThread.wait()
             self.stimulation_running = False
-            
-            # Update the state machine
-            self.state_machine.stop_stimulation()
