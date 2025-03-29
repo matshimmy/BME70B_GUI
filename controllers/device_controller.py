@@ -6,6 +6,7 @@ from services.simulation_service import SimulationService
 from controllers.state_machine import StateMachine
 from services.usb_connection import USBConnection
 from enums.connection_type import ConnectionType
+from services.stimulation_service import StimulationService
 
 class DeviceController:
     def __init__(self, state_machine: StateMachine):
@@ -65,6 +66,13 @@ class DeviceController:
         # We'll create the simulation service when needed with the active connection
         self.simulationService = None
         self.simulation_running = False
+
+        # ----------------------------------------------------------------
+        # Stimulation Thread & Service
+        # ----------------------------------------------------------------
+        self.stimulationThread = QThread()
+        self.stimulationService = None
+        self.stimulation_running = False
 
     # --------------------------------------------------------------------------
     # SYSTEM CHECK TASK
@@ -344,9 +352,76 @@ class DeviceController:
         self.state_machine.disconnect_device()
 
     def start_stimulation(self):
-        pass
-        # self.state_machine.start_stimulation()
+        """Start the stimulation process"""
+        if self.active_connection is None:
+            print("Error: No active connection available")
+            return
+            
+        if not self.stimulation_running:
+            self.stimulation_running = True
+            
+            # Create the stimulation service with the active connection
+            self.stimulationService = StimulationService(self.state_machine.model, self.active_connection)
+            
+            # Move the service to the stimulationThread
+            self.stimulationService.moveToThread(self.stimulationThread)
+            
+            # Connect the thread's started signal to run_stimulation
+            self.stimulationThread.started.connect(self.stimulationService.run_stimulation)
+            
+            # Connect service signals
+            self.stimulationService.finished.connect(self.handle_stimulation_finished)
+            self.stimulationService.error.connect(self.handle_stimulation_error)
+            self.stimulationService.ready.connect(self.handle_stimulation_ready)
+            
+            # Start the thread
+            self.stimulationThread.start()
+
+    def handle_stimulation_finished(self):
+        """Handle stimulation completion"""
+        self.stimulation_running = False
+        self.stimulationThread.quit()
+        self.stimulationThread.wait()
+
+    def handle_stimulation_error(self, error_message):
+        """Handle stimulation errors"""
+        print(f"Stimulation error: {error_message}")
+        self.stop_stimulation()
+
+    def handle_stimulation_ready(self):
+        """Handle when stimulation service is ready"""
+        # Update the state machine after service is ready
+        self.state_machine.transition_to_running_stimulation()
+
+    def configure_stimulation(self):
+        if self.active_connection is None:
+            print("Error: No active connection available")
+            return False
+        if not self.stimulation_running:
+            # Create the stimulation service with the active connection
+            self.stimulationService = StimulationService(self.state_machine.model, self.active_connection)
+            
+            # Configure stimulation parameters
+            if not self.stimulationService.configure_stimulation():
+                return False
+                
+            return True
+        return False
+    
+    def send_stimulation_command(self, command: str):
+        """Send stimulation command"""
+        if self.stimulationService and self.stimulation_running:
+            return self.stimulationService.send_command(command)
+        return False
 
     def stop_stimulation(self):
-        pass
-        # self.state_machine.stop_stimulation()
+        """Stop the stimulation process"""
+        if self.stimulation_running:
+            # Request interruption and quit the thread
+            self.stimulationThread.requestInterruption()
+            self.stimulationThread.quit()
+            self.stimulationThread.wait()
+            self.stimulation_running = False
+            
+            # Update the state machine
+            self.state_machine.stop_stimulation()

@@ -77,6 +77,8 @@ class RunningStimulationWidget(BaseWidget):
 
             self.back_button.setEnabled(False)
             self.model.stimulation_running = False
+
+            self.device_controller.send_stimulation_command("START STIM")
         else:
             self.start_button.setText("Start Stimulation")
             self.start_button.setObjectName("greenButton")
@@ -90,6 +92,7 @@ class RunningStimulationWidget(BaseWidget):
 
             self.back_button.setEnabled(True)
             self.model.stimulation_running = True
+            self.device_controller.send_stimulation_command("STOP")
 
     def reset_ui(self):
         pass

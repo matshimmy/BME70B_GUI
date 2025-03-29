@@ -109,9 +109,6 @@ class StimulationOptionsWidget(BaseWidget):
         # Update state machine
         self.state_machine.update_stimulation_options(frequency, duty_cycle)
 
-        # Transition to the running stimulation state
-        self.state_machine.transition_to_running_stimulation()
-
         # Finally start the stimulation
         self.device_controller.start_stimulation()
 

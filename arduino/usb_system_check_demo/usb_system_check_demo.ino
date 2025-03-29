@@ -4,10 +4,12 @@ int sampFreq;
 int sig;
 bool simulation_mode = false;   // Flag for simulation mode
 bool acquisition_mode = false;  // Flag for acquisition mode
+bool stimulation_mode = false;  // Flag for stimulation mode
 bool template_mode = false;     // Flag for template mode
 
 int acqOutput = A7;
 int digControl = 8;
+int stimControl = 9; // temporary control pin for stimulation
 int acqDig = 0;
 float voltage = 0.00;
 
@@ -20,6 +22,11 @@ bool systemCheck = false;
 float freq;
 float sinArgIncrement;
 float sinArg = 0.0;
+
+// Variables for stimulation
+int stimulation_frequency = 35;  // Default frequency
+int stimulation_duty_cycle = 50; // Default duty cycle
+bool stimulation_running = false;
 
 int template_size;
 
@@ -72,6 +79,7 @@ void loop() {
     } else if (checkCommand.startsWith("TEST TRANSMISSION")) {
       simulation_mode = false;
       acquisition_mode = false;
+      stimulation_mode = false;
       Serial.println("OK");
     } else if (checkCommand.startsWith("SET SAMPLE")) {
       // Handle sampling rate command (only needed for acquisition mode)
@@ -81,22 +89,40 @@ void loop() {
       freq = checkCommand.substring(9).toInt();
       // calculate the sine increment based on the obtained values from pc
       sinArgIncrement = 2 * PI * (freq / sampFreq);
+    } else if (checkCommand.startsWith("SET FREQ")) {
+      // Handle stimulation frequency command
+      stimulation_frequency = checkCommand.substring(8).toInt();
+      Serial.println("FREQ SET");
+    } else if (checkCommand.startsWith("SET DUTY")) {
+      // Handle stimulation duty cycle command
+      stimulation_duty_cycle = checkCommand.substring(8).toInt();
+      Serial.println("DUTY SET");
+    } else if (checkCommand == "START STIM") {
+      stimulation_mode = true;
+      stimulation_running = true;
+      // digitalWrite(stimControl, HIGH);
+      Serial.println("STIMULATION STARTED");
     } else if (checkCommand == "START SIM") {
       digitalWrite(digControl, HIGH);
       simulation_mode = true;    // Simulation mode
       acquisition_mode = false;  // Not acquisition mode
-      Serial.println("SIMULATION STARTED");  // Keep this as it's a critical state change
+      stimulation_mode = false;  // Not stimulation mode
+      Serial.println("SIMULATION STARTED");
     } else if (checkCommand == "START ACQ") {
       digitalWrite(digControl, HIGH);
       simulation_mode = false;  // Not simulation mode
       acquisition_mode = true;  // Acquisition mode
+      stimulation_mode = false;  // Not stimulation mode
       sinArg = 0.0;             // Reset sine wave phase
-      Serial.println("ACQUISITION STARTED");  // Keep this as it's a critical state change
+      Serial.println("ACQUISITION STARTED");
     } else if (checkCommand == "STOP") {
+      // digitalWrite(stimControl, LOW);
       simulation_mode = false;
       acquisition_mode = false;
+      stimulation_mode = false;
+      stimulation_running = false;
       template_mode = false;
-      Serial.println("STOPPED");  // Keep this as it's a critical state change
+      Serial.println("STOPPED");
     } else if (checkCommand == "SET TEMPLATE FALSE") {
       template_mode = false;
       Serial.println("OK");
@@ -135,5 +161,12 @@ void loop() {
 
     // 1/fs
     delayMicroseconds(1000000 / sampFreq);
+  }
+
+  // Handle stimulation mode
+  if (stimulation_mode && stimulation_running) {
+    digitalWrite(stimControl, HIGH);
+  } else {
+    digitalWrite(stimControl, LOW);
   }
 }
