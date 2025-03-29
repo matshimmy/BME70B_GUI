@@ -103,6 +103,9 @@ class StateMachine(QObject):
     def transition_to_stimulation_options(self):
         self.transition_to(AppState.STIMULATION_OPTIONS)
 
+    def transition_to_running_stimulation(self):
+        self.transition_to(AppState.RUNNING_STIMULATION)
+
     def update_stimulation_options(self, frequency: int, duty_cycle: int):
         self.model.stimulation_frequency = frequency
         self.model.stimulation_duty_cycle = duty_cycle

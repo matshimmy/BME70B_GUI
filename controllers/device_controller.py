@@ -344,4 +344,9 @@ class DeviceController:
         self.state_machine.disconnect_device()
 
     def start_stimulation(self):
-        self.state_machine.start_stimulation()
+        pass
+        # self.state_machine.start_stimulation()
+
+    def stop_stimulation(self):
+        pass
+        # self.state_machine.stop_stimulation()
