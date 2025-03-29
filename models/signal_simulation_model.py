@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import QObject, pyqtSignal, QTimer, QThread
+from PyQt5.QtCore import QObject, pyqtSignal, QThread
 import time
 
 class DataGenerationThread(QThread):

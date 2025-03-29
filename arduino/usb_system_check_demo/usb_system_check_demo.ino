@@ -36,9 +36,6 @@ void loop() {
     // remove whitespace, \n, carriage returns etc.
     checkCommand.trim();
 
-    // Send acknowledgment that we received the command
-    Serial.println("ACK");
-
     if (simulation_mode) {
       // In simulation mode, check for DATA: prefix
       if (checkCommand.startsWith("DATA:")) {
@@ -61,6 +58,9 @@ void loop() {
         return;  // Skip further command processing
       }
     }
+
+    // Send acknowledgment for all other commands
+    Serial.println("ACK");
 
     if (checkCommand.startsWith("CHECK POWER")) {
       // start reading integer from index 11 onwards

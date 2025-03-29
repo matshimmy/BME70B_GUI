@@ -21,6 +21,28 @@ class SimulationService(QObject):
         """Set the device controller for sending data"""
         self.device_controller = controller
 
+    def _send_data_direct(self, data: str) -> str:
+        """Send data directly to Arduino without waiting for acknowledgment"""
+        if not self.connection.is_connected():
+            return "ERROR: Not connected"
+        try:
+            # Send the data
+            self.connection.arduino.write((data + "\n").encode())
+            
+            # Wait for response with timeout
+            start_time = time.time()
+            while time.time() - start_time < 2.0:  # 2 second timeout
+                if self.connection.arduino.in_waiting:
+                    response = self.connection.arduino.readline().decode().strip()
+                    if response:  # If we got a non-empty response
+                        return response
+                time.sleep(0.01)  # Small sleep to prevent CPU spinning
+            
+            return "ERROR: No response received"
+        except Exception as e:
+            print(f"Direct data error: {e}")
+            return f"ERROR: {str(e)}"
+
     def configure_simulation(self):
         """Configure the simulation based on the model settings"""
         # Set template mode based on simulation type
@@ -41,14 +63,14 @@ class SimulationService(QObject):
         return True
 
     def send_data(self, data: float) -> bool:
-        """Send data to the Arduino for simulation using the command interface"""
+        """Send data to the Arduino for simulation using direct data sending"""
         try:
             if not self._running:
                 self.error.emit("Simulation not running")
                 return False
 
-            # Send the data with DATA: prefix
-            response = self.connection.send_command(f"DATA:{data:.6f}")
+            # Send the data with DATA: prefix using direct sending
+            response = self._send_data_direct(f"DATA:{data:.6f}")
             if "ERROR" in response:
                 print(f"SimulationService: Error response from device: {response}")  # Debug print
                 return False
