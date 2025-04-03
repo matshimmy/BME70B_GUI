@@ -28,7 +28,7 @@ class SimulationService(QObject):
         try:
             # Send the data
             self.connection.arduino.write((data + "\n").encode())
-            
+            return "100"
             # Wait for response with timeout
             start_time = time.time()
             while time.time() - start_time < 2.0:  # 2 second timeout
