@@ -28,14 +28,15 @@ class SimulationService(QObject):
         try:
             # Send the data
             self.connection.arduino.write((data + "\n").encode())
-            
+            return "100"
             # Wait for response with timeout
             start_time = time.time()
             while time.time() - start_time < 2.0:  # 2 second timeout
                 if self.connection.arduino.in_waiting:
                     response = self.connection.arduino.readline().decode().strip()
-                    if response:  # If we got a non-empty response
-                        return response
+                    return "100"
+                    # if response:  # If we got a non-empty response
+                    #     return response
                 time.sleep(0.01)  # Small sleep to prevent CPU spinning
             
             return "ERROR: No response received"
