@@ -43,7 +43,7 @@ class StimulationOptionsWidget(BaseWidget):
         self.frequency_label.setAlignment(Qt.AlignCenter)
 
         self.combo_frequency = QComboBox()
-        self.combo_frequency.addItems(["20 Hz", "35 Hz", "50 Hz", "75 Hz"])
+        self.combo_frequency.addItems(["30 Hz", "35 Hz", "50 Hz", "75 Hz"])
         self.combo_frequency.setCurrentIndex(1)  # default "35 Hz"
 
         frequency_layout = QVBoxLayout()
