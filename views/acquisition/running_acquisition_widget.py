@@ -81,8 +81,9 @@ class RunningAcquisitionWidget(BaseWidget):
         self.x_range_label = QLabel("Time window (s):")
         x_range_layout.addWidget(self.x_range_label)
 
-        self.x_range_spinbox = QSpinBox()
-        self.x_range_spinbox.setRange(1, 60)
+        self.x_range_spinbox = QDoubleSpinBox()
+        self.x_range_spinbox.setRange(0.1, 60)
+        self.x_range_spinbox.setDecimals(2)
         self.x_range_spinbox.valueChanged.connect(self.update_graph)
         x_range_layout.addWidget(self.x_range_spinbox)
 
@@ -180,11 +181,11 @@ class RunningAcquisitionWidget(BaseWidget):
         self.back_button.setEnabled(False)
 
         # Default time window
-        self.x_range_spinbox.setValue(5)
+        self.x_range_spinbox.setValue(5.0)
 
         # Clear the main plot
         self.curve.setData([], [])
-        self.plot_widget.setXRange(0, 5)
+        self.plot_widget.setXRange(0, 5.0)
 
         # Acquisition status
         self.acquisition_status_label.setText("Acquisition In Progress...")
