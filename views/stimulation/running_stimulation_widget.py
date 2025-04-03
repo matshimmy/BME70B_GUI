@@ -27,6 +27,23 @@ class RunningStimulationWidget(BaseWidget):
         self.label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.label)
 
+        # Frequency and duty cycle labels
+        frequency_layout = QHBoxLayout()
+        frequency_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.frequency_label = QLabel(f"Frequency: {self.model.stimulation_frequency} Hz")
+        self.frequency_label.setAlignment(Qt.AlignCenter)
+        frequency_layout.addWidget(self.frequency_label)
+
+        frequency_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        self.duty_cycle_label = QLabel(f"Duty Cycle: {self.model.stimulation_duty_cycle} %")
+        self.duty_cycle_label.setAlignment(Qt.AlignCenter)
+        frequency_layout.addWidget(self.duty_cycle_label)
+
+        frequency_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        main_layout.addLayout(frequency_layout)
+
         self.start_button = QPushButton("Start Stimulation")
         self.start_button.setObjectName("greenButton")  # For QSS styling
         self.start_button.clicked.connect(self.toggle_stimulation)
@@ -48,6 +65,8 @@ class RunningStimulationWidget(BaseWidget):
 
         main_layout.addLayout(bottom_layout)
         self.setLayout(main_layout)
+
+        self.model.model_changed.connect(self.reset_ui)
 
     def _setup_top_row(self) -> QHBoxLayout:
         layout = QHBoxLayout()
@@ -95,7 +114,8 @@ class RunningStimulationWidget(BaseWidget):
             self.device_controller.send_stimulation_command("START STIM")
 
     def reset_ui(self):
-        pass
+        self.frequency_label.setText(f"Frequency: {self.model.stimulation_frequency} Hz")
+        self.duty_cycle_label.setText(f"Duty Cycle: {self.model.stimulation_duty_cycle} %")
 
     def _update_button_style(self, button: QPushButton):
         """Force a style refresh for a button that changes objectName."""
