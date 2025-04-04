@@ -123,7 +123,7 @@ void loop() {
       stimulation_mode = false;  // Not stimulation mode
       Serial.println("SIMULATION STARTED");
     } else if (checkCommand == "START ACQ") {
-      digitalWrite(digControl, HIGH);
+      // digitalWrite(digControl, HIGH);
       simulation_mode = false;   // Not simulation mode
       acquisition_mode = true;   // Acquisition mode
       stimulation_mode = false;  // Not stimulation mode
