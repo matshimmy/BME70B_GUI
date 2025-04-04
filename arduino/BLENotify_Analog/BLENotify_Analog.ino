@@ -1,4 +1,11 @@
 #include <ArduinoBLE.h>
+#include <mbedtls/aes.h>
+#include <Arduino.h>
+
+const byte aes_key[16] = {
+  0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe,
+  0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81
+};
 
 // Pin assignments
 int digControl = 8;   // Digital pin controlling ECG/EMG selection
@@ -21,8 +28,8 @@ const char* READ_CHARACTERISTIC_UUID  = "12345678-1234-1234-1234-12345678090e";
 
 // Create BLE service and characteristics
 BLEService mainService(SERVICE_UUID);
-BLEStringCharacteristic writeCharacteristic(WRITE_CHARACTERISTIC_UUID, BLEWrite, 40);
-BLEStringCharacteristic readCharacteristic(READ_CHARACTERISTIC_UUID, BLERead | BLENotify, 40);
+BLEStringCharacteristic writeCharacteristic(WRITE_CHARACTERISTIC_UUID, BLEWrite, 96);
+BLEStringCharacteristic readCharacteristic(READ_CHARACTERISTIC_UUID, BLERead | BLENotify, 96);
 
 // Timing variables for continuous data transmission
 unsigned long lastSampleTime = 0;
@@ -199,6 +206,8 @@ String buildPacket() {
   //   SINE, val0, val1, ... val5, CRC
   // but here reading from analog pin A7 for each sample.
 
+  byte encrypted[48];
+
   String packet = "SINE,"; 
   const int numSamples = 6;
   int samples[numSamples];
@@ -206,6 +215,7 @@ String buildPacket() {
   // Gather 6 readings
   for (int i = 0; i < numSamples; i++) {
     int adcValue = analogRead(acqOutput);
+    // int adcValue = 4000;
     // If you want to treat it as 12-bit, ensure 0-4095
     samples[i] = constrain(adcValue, 0, 4095);
 
@@ -238,9 +248,41 @@ String buildPacket() {
   crc = crc % 256;
   packet += "," + String(crc);
 
+  if ((int)packet.length() <= 49) {
+    packet += ",";
+    for (int i = (int)packet.length(); i <= 49; i++) {
+      packet += "0";
+    }
+  }
+
+  encryptAES_ECB((byte *)packet.c_str(), encrypted, (int)packet.length());
+
+  // Convert to hex string for return
+  String encryptedHex = "";
+  for (int i = 0; i < 48; i++) {
+    if (encrypted[i] < 0x10) encryptedHex += "0";
+    encryptedHex += String(encrypted[i], HEX);
+  }
+
+
+
   // No extra prints here to avoid flooding
   // If you want to debug each packet uncomment: (could freeze)
   // Serial.println(packet);
 
-  return packet;
+  // return packet;
+  return encryptedHex;
+}
+
+
+void encryptAES_ECB(const byte *input, byte *output, size_t length) {
+  mbedtls_aes_context aes;
+  mbedtls_aes_init(&aes);
+  mbedtls_aes_setkey_enc(&aes, aes_key, 128);
+
+  for (size_t i = 0; i < length; i += 16) {
+    mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_ENCRYPT, input + i, output + i);
+  }
+
+  mbedtls_aes_free(&aes);
 }

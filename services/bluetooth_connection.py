@@ -3,6 +3,8 @@ import threading
 from queue import Queue, Empty
 from bleak import BleakClient, BleakScanner
 from services.connection_interface import ConnectionInterface
+from Crypto.Cipher import AES
+import binascii
 
 class BluetoothConnection(ConnectionInterface):
     """Bluetooth connection implementation using bleak library"""
@@ -24,6 +26,8 @@ class BluetoothConnection(ConnectionInterface):
         self._command_queue = Queue()
         self._response_queue = Queue()
         self._stop_event = threading.Event()
+        self.key = bytes([0x60, 0x3d, 0xeb, 0x10, 0x15, 0xca, 0x71, 0xbe, 
+                          0x2b, 0x73, 0xae, 0xf0, 0x85, 0x7d, 0x77, 0x81])
     
     def connect(self):
         """Establish connection to the Bluetooth device"""
@@ -233,6 +237,16 @@ class BluetoothConnection(ConnectionInterface):
         try:
             data_str = data.decode()
             
+            # Convert hex string to bytes
+            encrypted_bytes = binascii.unhexlify(data_str)
+
+            # Create AES ECB cipher
+            cipher = AES.new(self.key, AES.MODE_ECB)
+
+            # Decrypt
+            decrypted = cipher.decrypt(encrypted_bytes)
+            data_str = decrypted.decode('ascii', errors='ignore')
+
             # If this is a command response (not starting with SINE,), ignore it
             if not data_str.startswith("SINE,"):
                 return
@@ -243,10 +257,10 @@ class BluetoothConnection(ConnectionInterface):
                 return
                 
             # Extract CRC from packet
-            received_crc = int(parts[-1])
+            received_crc = int(parts[-2])
             
             # Calculate expected CRC
-            values = [int(val) for val in parts[1:-1]]  # Exclude header and CRC
+            values = [int(val) for val in parts[1:-2]]  # Exclude header and CRC
             calculated_crc = sum(values) % 256
             
             # Verify CRC
