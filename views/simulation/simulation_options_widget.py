@@ -87,17 +87,25 @@ class SimulationOptionsWidget(BaseWidget):
         self.custom_signal_path.setStyleSheet("color: gray;")
         self.custom_signal_layout.addWidget(self.custom_signal_path)
 
+        buttons_layout = QHBoxLayout()
+        
         self.browse_button = QPushButton("Browse...")
         self.browse_button.setFixedWidth(100)
         self.browse_button.clicked.connect(self.select_csv_file)
-        self.custom_signal_layout.addWidget(self.browse_button)
+        buttons_layout.addWidget(self.browse_button)
+        
+        # Add some spacing between buttons
+        buttons_layout.addSpacerItem(QSpacerItem(10, 0, QSizePolicy.Fixed, QSizePolicy.Minimum))
+        
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.setFixedWidth(100)
+        self.clear_button.clicked.connect(self.clear_csv_file)
+        buttons_layout.addWidget(self.clear_button)
+        
+        self.custom_signal_layout.addLayout(buttons_layout)
 
         self.custom_signal_container.setLayout(self.custom_signal_layout)
         options_layout.addWidget(self.custom_signal_container)
-
-        # Initially hidden (since Template is the default)
-        self.custom_signal_container.setVisible(False)
-        self.full_signal_radio.toggled.connect(self.toggle_radio_layout)
 
         # ---------------------------
         # Template Length Spin Box
@@ -118,6 +126,7 @@ class SimulationOptionsWidget(BaseWidget):
         options_layout.addWidget(self.template_length_container)
 
         self.template_length_container.setVisible(True)
+
         # ---------------------------
         # Transmission Rate ComboBox
         # ---------------------------
@@ -179,15 +188,15 @@ class SimulationOptionsWidget(BaseWidget):
         main_layout.addLayout(bottom_layout)
         self.setLayout(main_layout)
 
+        # ---------------------------
+        # Connections and updates
+        # ---------------------------
         self._update_start_button_state()
-
-    # ---------------------------
-    # Toggle the Custom Signal Container
-    # ---------------------------
-    def toggle_radio_layout(self, checked: bool):
-        self.custom_signal_container.setVisible(checked)
-        self.template_length_container.setVisible(not checked)
-        self._update_start_button_state()
+                
+        # Now that both containers are created, connect the radio buttons
+        self.radio_group.buttonClicked.connect(self.on_radio_changed)
+        # Initially set the correct UI
+        self.on_radio_changed()
 
     # ---------------------------
     # File Dialog for Selecting a CSV
@@ -217,12 +226,12 @@ class SimulationOptionsWidget(BaseWidget):
         # Full Signal requires a CSV
         full_signal_chosen = self.full_signal_radio.isChecked()
         if full_signal_chosen and not self.custom_signal_file:
-            # No file selected yet
+            # No file selected yet for Full Signal mode
             self.start_button.setEnabled(False)
             self.start_button.setText("Select custom signal CSV file.")
             self.start_button.setObjectName("greyButton")
         else:
-            # Either Template mode or CSV is provided
+            # Either Template mode (CSV optional) or CSV is provided for Full Signal
             self.start_button.setEnabled(True)
             self.start_button.setText("Next")
             self.start_button.setObjectName("greenButton")
@@ -279,3 +288,26 @@ class SimulationOptionsWidget(BaseWidget):
 
     def reset_ui(self):
         pass
+
+    # ---------------------------
+    # Update UI Based on Radio Mode
+    # ---------------------------
+    def on_radio_changed(self):
+        full_signal_chosen = self.full_signal_radio.isChecked()
+        
+        # Update label text
+        if full_signal_chosen:
+            self.custom_signal_label.setText("Custom Signal CSV:")
+        else:
+            self.custom_signal_label.setText("Custom Template CSV:")
+        
+        # Toggle template length visibility (only visible in Template mode)
+        self.template_length_container.setVisible(not full_signal_chosen)
+        
+        # Update start button state
+        self._update_start_button_state()
+
+    def clear_csv_file(self):
+        self.custom_signal_file = None
+        self.custom_signal_path.setText("[None Selected]")
+        self._update_start_button_state()
