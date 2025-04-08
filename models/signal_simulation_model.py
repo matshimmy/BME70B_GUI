@@ -5,7 +5,7 @@ import time
 
 class DataGenerationThread(QThread):
     data_ready = pyqtSignal(float)  # Signal for sending data to device
-    buffer_ready = pyqtSignal()     # Signal for updating visualization
+    buffer_ready = pyqtSignal(np.ndarray, np.ndarray)  # Signal for updating visualization with time and signal data
     
     def __init__(self, parent=None, model=None):
         super().__init__(parent)
@@ -22,6 +22,21 @@ class DataGenerationThread(QThread):
         self._device_controller = None
         self._paused = True
         self._model = model  # Store the main model reference
+        
+        # Artifact parameters
+        self._muscle_artifact = False
+        self._random_movement_artifact = False
+        self._sixty_hz_artifact = False
+        self._muscle_amplitude = 0.2
+        self._random_movement_amplitude = 0.1
+        self._sixty_hz_amplitude = 0.15
+        self._current_movement = 0.0
+        self._movement_duration = 0
+        self._movement_counter = 0
+        
+        # Buffer for visualization
+        self._buffer_time = np.array([])
+        self._buffer_signal = np.array([])
 
     def set_data(self, time_data, signal_data, template_mode=False, template_data=None):
         self._time_data = time_data
@@ -45,6 +60,46 @@ class DataGenerationThread(QThread):
     def resume(self):
         self._paused = False
 
+    def set_artifacts(self, muscle: bool, random_movement: bool, sixty_hz: bool):
+        """Set which artifacts to include in the simulation"""
+        self._muscle_artifact = muscle
+        self._random_movement_artifact = random_movement
+        self._sixty_hz_artifact = sixty_hz
+
+    def _generate_muscle_artifact(self) -> float:
+        if not self._muscle_artifact:
+            return 0.0
+        
+        # Generate single point of EMG-like noise
+        noise = np.random.normal(0, 1)
+        envelope = abs(np.random.normal(0, 1))
+        return noise * envelope * self._muscle_amplitude
+
+    def _generate_random_movement_artifact(self) -> float:
+        if not self._random_movement_artifact:
+            return 0.0
+        
+        # If no current movement and 10% chance, start new movement
+        if self._movement_duration == 0 and np.random.random() < 0.1:
+            self._movement_duration = int(self._transmission_rate * 0.5)  # ~0.5 second movement
+            self._current_movement = np.random.normal(0, self._random_movement_amplitude)
+            self._movement_counter = 0
+        
+        if self._movement_duration > 0:
+            # Create smooth transition using half a sine wave
+            movement = self._current_movement * np.sin(np.pi * self._movement_counter / self._movement_duration)
+            self._movement_counter += 1
+            if self._movement_counter >= self._movement_duration:
+                self._movement_duration = 0
+            return movement
+        
+        return 0.0
+
+    def _generate_sixty_hz_artifact(self, time_point: float) -> float:
+        if not self._sixty_hz_artifact:
+            return 0.0
+        return self._sixty_hz_amplitude * np.sin(2 * np.pi * 60 * time_point)
+
     def run(self):
         self._running = True
         # Wait for model's simulation_running to be True before starting the loop
@@ -58,19 +113,32 @@ class DataGenerationThread(QThread):
 
             if self._template_mode:
                 value = self._signal_data[self._current_index % len(self._signal_data)]
+                time_point = (self._current_index / self._transmission_rate) % (self._time_data[-1] - self._time_data[0])
             else:
                 if self._current_index >= len(self._signal_data):
                     self._running = False
                     break
                 value = self._signal_data[self._current_index]
+                time_point = self._time_data[self._current_index]
+
+            # Add artifacts to the value
+            value += self._generate_muscle_artifact()
+            value += self._generate_random_movement_artifact()
+            value += self._generate_sixty_hz_artifact(time_point)
+
+            # Store in buffer
+            self._buffer_time = np.append(self._buffer_time, time_point)
+            self._buffer_signal = np.append(self._buffer_signal, value)
 
             # Send data point directly to device if controller is available
             if self._device_controller:
                 self._device_controller.send_simulation_data(value)
             
-            # Update visualization buffer
-            if self._current_index % self._buffer_size == 0:
-                self.buffer_ready.emit()
+            # Update visualization buffer when full
+            if len(self._buffer_signal) >= self._buffer_size:
+                self.buffer_ready.emit(self._buffer_time, self._buffer_signal)
+                self._buffer_time = np.array([])
+                self._buffer_signal = np.array([])
 
             self._current_index += 1
             
@@ -144,6 +212,8 @@ class SignalSimulationModel(QObject):
         self._muscle_artifact = muscle
         self._random_movement_artifact = random_movement
         self._sixty_hz_artifact = sixty_hz
+        # Pass artifact settings to generation thread
+        self._generation_thread.set_artifacts(muscle, random_movement, sixty_hz)
 
     def set_template_data(self, template_data: np.ndarray, template_duration: float):
         """Set up template mode with the given template data"""
@@ -184,45 +254,15 @@ class SignalSimulationModel(QObject):
         self._signal_data = np.interp(new_time_data, time_data, signal_data)
         self._time_data = new_time_data
 
-    def _handle_buffer_ready(self):
+    def _handle_buffer_ready(self, time_data: np.ndarray, signal_data: np.ndarray):
         """Handle buffer ready for visualization"""
-        if self._template_mode:
-            cycle_duration = self._time_data[-1] - self._time_data[0]
-            current_cycle = self._current_transfer_index // len(self._signal_data)
-            # Calculate the start time for this cycle
-            start_time = cycle_duration * current_cycle
-            # Create time array for this cycle starting from the correct time
-            new_time = np.linspace(start_time, start_time + cycle_duration, len(self._signal_data))
-            new_signal = self._signal_data.copy()
-        else:
-            buffer_size = self._generation_thread._buffer_size
-            start_time = self._current_transfer_index / self._transmission_rate
-            end_time = (self._current_transfer_index + buffer_size) / self._transmission_rate
-            new_time = np.linspace(start_time, end_time, buffer_size)
-            
-            start_idx = self._current_transfer_index
-            end_idx = start_idx + buffer_size
-            if end_idx > len(self._signal_data):
-                end_idx = len(self._signal_data)
-            new_signal = self._signal_data[start_idx:end_idx].copy()
-            
-            if len(new_signal) < buffer_size:
-                new_signal = np.pad(new_signal, (0, buffer_size - len(new_signal)))
-
-        # Add artifacts
-        chunk_size = len(new_signal)
-        new_signal += self._generate_muscle_artifact(chunk_size)
-        new_signal += self._generate_random_movement_artifact(chunk_size)
-        new_signal += self._generate_sixty_hz_artifact(new_time)
-        
         if len(self._signal_transferred_data) == 0:
-            self._signal_transferred_data = new_signal
-            self._time_transferred_data = new_time
+            self._signal_transferred_data = signal_data
+            self._time_transferred_data = time_data
         else:
-            self._signal_transferred_data = np.append(self._signal_transferred_data, new_signal)
-            self._time_transferred_data = np.append(self._time_transferred_data, new_time)
+            self._signal_transferred_data = np.append(self._signal_transferred_data, signal_data)
+            self._time_transferred_data = np.append(self._time_transferred_data, time_data)
 
-        self._current_transfer_index += self._generation_thread._buffer_size
         self.simulation_chunk_ready.emit()
 
     def _generate_muscle_artifact(self, num_points: int) -> np.ndarray:
