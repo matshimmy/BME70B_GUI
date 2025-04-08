@@ -37,8 +37,28 @@ class DataGenerationThread(QThread):
         # Buffer for visualization
         self._buffer_time = np.array([])
         self._buffer_signal = np.array([])
+        
+        # Add value and time_point as instance variables
+        self._current_value = 0.0
+        self._current_time_point = 0.0
+
+    def reset(self):
+        """Reset all buffers and counters in the thread"""
+        self._current_index = 0
+        self._buffer_time = np.array([])
+        self._buffer_signal = np.array([])
+        self._current_movement = 0.0
+        self._movement_duration = 0
+        self._movement_counter = 0
+        self._last_send_time = 0
+        self._last_buffer_time = 0
+        self._paused = True
+        # Reset the current value and time point too
+        self._current_value = 0.0
+        self._current_time_point = 0.0
 
     def set_data(self, time_data, signal_data, template_mode=False, template_data=None):
+        self.reset()  # Reset buffers when new data is set
         self._time_data = time_data
         self._signal_data = signal_data
         self._template_mode = template_mode
@@ -102,6 +122,7 @@ class DataGenerationThread(QThread):
 
     def run(self):
         self._running = True
+        
         # Wait for model's simulation_running to be True before starting the loop
         while self._running and not self._model.simulation_running:
             time.sleep(0.01)  # Small sleep while waiting
@@ -112,30 +133,32 @@ class DataGenerationThread(QThread):
                 continue
 
             if self._template_mode:
-                value = self._signal_data[self._current_index % len(self._signal_data)]
-                time_point = (self._current_index / self._transmission_rate) % (self._time_data[-1] - self._time_data[0])
+                self._current_value = self._signal_data[self._current_index % len(self._signal_data)]
+                self._current_time_point = (self._current_index / self._transmission_rate) % (self._time_data[-1] - self._time_data[0])
             else:
                 if self._current_index >= len(self._signal_data):
                     self._running = False
                     break
-                value = self._signal_data[self._current_index]
-                time_point = self._time_data[self._current_index]
+                self._current_value = self._signal_data[self._current_index]
+                self._current_time_point = self._time_data[self._current_index]
 
             # Add artifacts to the value
-            value += self._generate_muscle_artifact()
-            value += self._generate_random_movement_artifact()
-            value += self._generate_sixty_hz_artifact(time_point)
+            self._current_value += self._generate_muscle_artifact()
+            self._current_value += self._generate_random_movement_artifact()
+            self._current_value += self._generate_sixty_hz_artifact(self._current_time_point)
+            # print("time_point: ", self._current_time_point)
 
             # Store in buffer
-            self._buffer_time = np.append(self._buffer_time, time_point)
-            self._buffer_signal = np.append(self._buffer_signal, value)
+            self._buffer_time = np.append(self._buffer_time, self._current_time_point)
+            self._buffer_signal = np.append(self._buffer_signal, self._current_value)
 
             # Send data point directly to device if controller is available
             if self._device_controller:
-                self._device_controller.send_simulation_data(value)
+                self._device_controller.send_simulation_data(self._current_value)
             
             # Update visualization buffer when full
             if len(self._buffer_signal) >= self._buffer_size:
+                # print("buffer time: ", self._buffer_time)
                 self.buffer_ready.emit(self._buffer_time, self._buffer_signal)
                 self._buffer_time = np.array([])
                 self._buffer_signal = np.array([])
@@ -194,6 +217,7 @@ class SignalSimulationModel(QObject):
         self._signal_transferred_data = np.array([])
         self._time_transferred_data = np.array([])
         self._current_transfer_index = 0
+        self._generation_thread.reset()  # Reset thread buffers
         self._generation_thread.stop()
         self._generation_thread.wait()
         self._template_mode = False
