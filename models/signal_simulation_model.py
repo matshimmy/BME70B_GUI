@@ -56,6 +56,9 @@ class DataGenerationThread(QThread):
         # Reset the current value and time point too
         self._current_value = 0.0
         self._current_time_point = 0.0
+        # Reset template cycle tracking
+        self._current_cycle = 0
+        self._cycles_completed = 0
 
     def set_data(self, time_data, signal_data, template_mode=False, template_data=None):
         self.reset()  # Reset buffers when new data is set
@@ -133,8 +136,21 @@ class DataGenerationThread(QThread):
                 continue
 
             if self._template_mode:
-                self._current_value = self._signal_data[self._current_index % len(self._signal_data)]
-                self._current_time_point = (self._current_index / self._transmission_rate) % (self._time_data[-1] - self._time_data[0])
+                # Calculate correct time point with cycle tracking
+                cycle_duration = self._time_data[-1] - self._time_data[0]
+                template_index = self._current_index % len(self._signal_data)
+                
+                # If we've completed a full cycle
+                if template_index == 0 and self._current_index > 0:
+                    self._cycles_completed += 1
+                
+                # Get value from the template at the current position
+                self._current_value = self._signal_data[template_index]
+                
+                # Calculate time with proper cycle offset
+                base_time_point = self._time_data[template_index]
+                cycle_offset = self._cycles_completed * cycle_duration
+                self._current_time_point = base_time_point + cycle_offset
             else:
                 if self._current_index >= len(self._signal_data):
                     self._running = False
@@ -146,7 +162,6 @@ class DataGenerationThread(QThread):
             self._current_value += self._generate_muscle_artifact()
             self._current_value += self._generate_random_movement_artifact()
             self._current_value += self._generate_sixty_hz_artifact(self._current_time_point)
-            # print("time_point: ", self._current_time_point)
 
             # Store in buffer
             self._buffer_time = np.append(self._buffer_time, self._current_time_point)
@@ -158,7 +173,6 @@ class DataGenerationThread(QThread):
             
             # Update visualization buffer when full
             if len(self._buffer_signal) >= self._buffer_size:
-                # print("buffer time: ", self._buffer_time)
                 self.buffer_ready.emit(self._buffer_time, self._buffer_signal)
                 self._buffer_time = np.array([])
                 self._buffer_signal = np.array([])
