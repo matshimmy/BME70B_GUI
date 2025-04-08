@@ -407,9 +407,9 @@ class RunningAcquisitionWidget(BaseWidget):
             return
 
         if file_format == "csv":
-            template_processor.save_csv(filename, channel_label="Template")
+            template_processor.save_csv(filename, channel_label="Signal")
         else:
-            template_processor.save_wfdb(filename, channel_label="Template")
+            template_processor.save_wfdb(filename, channel_label="Signal")
 
     def _get_selected_format(self) -> str:
         return "csv" if self.csv_radio.isChecked() else "wfdb"

@@ -1,8 +1,10 @@
 import numpy as np
 from PyQt5.QtCore import QObject, pyqtSignal
+import pandas as pd
 
 class TemplateModel(QObject):
     duration_changed = pyqtSignal(float)
+    template_changed = pyqtSignal()  # New signal for when template data is loaded/changed
 
     def __init__(self):
         super().__init__()
@@ -98,3 +100,75 @@ class TemplateModel(QObject):
     def update_template_point(self, index: int, value: float):
         if 0 <= index < len(self._template_data):
             self._template_data[index] = np.clip(value, self._y_range[0], self._y_range[1])
+
+    def load_csv_data(self, file_path: str, transmission_rate: int):
+        """
+        Load signal data from a CSV file and convert it to a template.
+        If file_path is None, reset to default template.
+        Otherwise, resample the signal data to match the template duration and create control points.
+        """
+        # Set transmission rate
+        self._transmission_rate = transmission_rate
+        
+        # Reset the control points to default if no file path provided
+        if file_path is None:
+            self._control_points = [
+                (0, 0),              # Start point
+                (self._duration, 0)  # End point
+            ]
+            self._update_template_from_control_points()
+            self._update_x_axis()
+            self.template_changed.emit()
+            return
+        
+        # Load CSV data
+        data = pd.read_csv(file_path)
+        signal_data = data['Signal'].values
+        
+        # Calculate number of points based on duration and transmission rate
+        num_points = self.get_num_points()
+        
+        # Resample the signal data to match the template duration and number of points
+        if len(signal_data) != num_points:
+            # Create original linear space
+            orig_x = np.linspace(0, self._duration, len(signal_data))
+            # Create target linear space
+            target_x = np.linspace(0, self._duration, num_points)
+            # Interpolate to get resampled signal
+            resampled_signal = np.interp(target_x, orig_x, signal_data)
+        else:
+            resampled_signal = signal_data
+            target_x = np.linspace(0, self._duration, num_points)
+        
+        # Create a limited number of control points from the resampled signal
+        num_desired_points = min(20, num_points)  # Limit to 20 points total
+        
+        # Reset control points
+        self._control_points = []
+        
+        if num_points > 1:
+            # Create evenly spaced indices across the full range
+            if num_points <= num_desired_points:
+                # Use all points if we have fewer than desired
+                indices = np.arange(num_points)
+            else:
+                # Sample evenly across the range
+                indices = np.linspace(0, num_points - 1, num_desired_points, dtype=int)
+            
+            # Create control points for each sampled index
+            for idx in indices:
+                x = target_x[idx]
+                y = resampled_signal[idx]
+                
+                # Ensure the values are within bounds
+                y = np.clip(y, self._y_range[0], self._y_range[1])
+                
+                self._control_points.append((x, y))
+        
+        # Sort control points by x value (just to be safe)
+        self._sort_control_points()
+        
+        # Update the template using the control points
+        self._update_template_from_control_points()
+        self._update_x_axis()
+        self.template_changed.emit()

@@ -276,6 +276,9 @@ class SimulationOptionsWidget(BaseWidget):
             simulation_type = SimulationType.TEMPLATE
             self.template_model.set_transmission_rate(transmission_rate)
             self.template_model.set_duration_ms(self.template_length_spinbox.value())
+            
+            # Always load from CSV, passing None if no file is selected
+            self.template_model.load_csv_data(self.custom_signal_file, transmission_rate)
         else:
             simulation_type = SimulationType.FULL_SIGNAL
             self.signal_simulation.load_csv_data(self.custom_signal_file, transmission_rate)
@@ -310,4 +313,16 @@ class SimulationOptionsWidget(BaseWidget):
     def clear_csv_file(self):
         self.custom_signal_file = None
         self.custom_signal_path.setText("[None Selected]")
+        
+        # If in template mode, reset the template to default
+        if self.template_radio.isChecked():
+            # Get current settings
+            duration_ms = self.template_length_spinbox.value()
+            transmission_rate_str = self.combo_transmission.currentText()
+            transmission_rate = int(transmission_rate_str.split()[0])
+            
+            # Reset template with null CSV
+            self.template_model.set_duration_ms(duration_ms)
+            self.template_model.load_csv_data(None, transmission_rate)
+            
         self._update_start_button_state()

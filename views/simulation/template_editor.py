@@ -13,8 +13,9 @@ class TemplateEditor(QWidget):
         self.current_point_index = None
         self.plot_clicked_toggle = False
         
-        # Connect to duration changes
+        # Connect to template model signals
         self.template_model.duration_changed.connect(self._on_duration_changed)
+        self.template_model.template_changed.connect(self._update_template)
         
         self._build_ui()
         self._update_template()  # Initial display
