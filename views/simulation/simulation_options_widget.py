@@ -264,6 +264,7 @@ class SimulationOptionsWidget(BaseWidget):
         # Transmission Rate (e.g., "100 Hz" -> 100)
         transmission_rate_str = self.combo_transmission.currentText()
         transmission_rate = int(transmission_rate_str.split()[0])
+        self.model.sampling_rate = transmission_rate
         # Artifact checkboxes
         muscle = self.muscle_checkbox.isChecked()
         random_movement = self.random_movement_checkbox.isChecked()

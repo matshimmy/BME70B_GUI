@@ -54,9 +54,12 @@ class SimulationService(QObject):
         else:
             template_command = "SET TEMPLATE FALSE"
         response = self.connection.send_command(template_command)
+
         print(f"response: {response}")
         if "ERROR" in response:
             raise Exception(f"Failed to configure template mode: {response}")
+        sampling_freq = str(self.model.sampling_rate)
+        response = self.connection.send_command(f"SET SAMPLE {sampling_freq}")
 
     def start_simulation(self):
         """Start the simulation process"""
