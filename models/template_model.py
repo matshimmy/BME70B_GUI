@@ -105,7 +105,8 @@ class TemplateModel(QObject):
         """
         Load signal data from a CSV file and convert it to a template.
         If file_path is None, reset to default template.
-        Otherwise, resample the signal data to match the template duration and create control points.
+        Otherwise, resample the signal data to match the template duration and create control points
+        based on signal amplitude with minimum spacing of 0.02 seconds.
         """
         # Set transmission rate
         self._transmission_rate = transmission_rate
@@ -140,32 +141,53 @@ class TemplateModel(QObject):
             resampled_signal = signal_data
             target_x = np.linspace(0, self._duration, num_points)
         
-        # Create a limited number of control points from the resampled signal
-        num_desired_points = min(20, num_points)  # Limit to 20 points total
-        
         # Reset control points
         self._control_points = []
         
-        if num_points > 1:
-            # Create evenly spaced indices across the full range
-            if num_points <= num_desired_points:
-                # Use all points if we have fewer than desired
-                indices = np.arange(num_points)
-            else:
-                # Sample evenly across the range
-                indices = np.linspace(0, num_points - 1, num_desired_points, dtype=int)
-            
-            # Create control points for each sampled index
-            for idx in indices:
-                x = target_x[idx]
-                y = resampled_signal[idx]
-                
-                # Ensure the values are within bounds
-                y = np.clip(y, self._y_range[0], self._y_range[1])
-                
-                self._control_points.append((x, y))
+        # Add start and end points
+        self._control_points.append((0, resampled_signal[0]))
+        self._control_points.append((self._duration, resampled_signal[-1]))
         
-        # Sort control points by x value (just to be safe)
+        # Find additional control points based on amplitude
+        min_spacing = 0.02  # Minimum spacing in seconds
+        min_spacing_points = int(min_spacing * self._transmission_rate)
+        
+        # Create a mask of available points (excluding areas around existing points)
+        available_points = np.ones(len(resampled_signal), dtype=bool)
+        available_points[0] = False  # Start point
+        available_points[-1] = False  # End point
+        
+        # Mask out points too close to existing control points
+        for point in self._control_points:
+            point_idx = int(point[0] * self._transmission_rate)
+            start_idx = max(0, point_idx - min_spacing_points)
+            end_idx = min(len(available_points), point_idx + min_spacing_points)
+            available_points[start_idx:end_idx] = False
+        
+        # Find up to 18 additional control points (20 total including start/end)
+        remaining_points = 25
+        while remaining_points > 0 and np.any(available_points):
+            # Find the point with maximum absolute amplitude among available points
+            masked_signal = np.where(available_points, np.abs(resampled_signal), -np.inf)
+            max_idx = np.argmax(masked_signal)
+            
+            if masked_signal[max_idx] == -np.inf:
+                break  # No more valid points
+                
+            # Add the new control point
+            x = target_x[max_idx]
+            y = resampled_signal[max_idx]
+            y = np.clip(y, self._y_range[0], self._y_range[1])
+            self._control_points.append((x, y))
+            
+            # Update available points mask
+            start_idx = max(0, max_idx - min_spacing_points)
+            end_idx = min(len(available_points), max_idx + min_spacing_points)
+            available_points[start_idx:end_idx] = False
+            
+            remaining_points -= 1
+        
+        # Sort control points by x value
         self._sort_control_points()
         
         # Update the template using the control points
