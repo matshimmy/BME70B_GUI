@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QApplication
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QApplication, QHBoxLayout, QDoubleSpinBox
 import pyqtgraph as pg
 import numpy as np
 from PyQt5.QtCore import Qt
@@ -21,7 +21,15 @@ class TemplateEditor(QWidget):
         self._update_template()  # Initial display
 
     def _build_ui(self):
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()  # Changed to QHBoxLayout to accommodate Y-axis control
+        
+        # Create Y-axis range control
+        self.y_range_spinbox = QDoubleSpinBox()
+        self.y_range_spinbox.setRange(0.1, 1.5)
+        self.y_range_spinbox.setDecimals(2)
+        self.y_range_spinbox.setValue(1.5)  # Default value matching template model
+        self.y_range_spinbox.valueChanged.connect(self._on_y_range_changed)
+        layout.addWidget(self.y_range_spinbox)
         
         # Create template plot
         self.template_plot = pg.PlotWidget()
@@ -130,4 +138,9 @@ class TemplateEditor(QWidget):
 
     def _on_duration_changed(self, duration_ms: float):
         self.template_plot.setXRange(0, duration_ms / 1000.0)
+        self._update_template()
+
+    def _on_y_range_changed(self, value: float):
+        """Update Y-axis range when spin box value changes"""
+        self.template_plot.setYRange(-value, value)
         self._update_template()
