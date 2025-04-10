@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QPushButton, QSpacerItem,
     QSizePolicy, QLabel, QFileDialog, QSpinBox, QDoubleSpinBox,
-    QRadioButton, QButtonGroup
+    QRadioButton, QButtonGroup, QCheckBox
 )
 from PyQt5.QtCore import Qt
 import pyqtgraph as pg
@@ -85,6 +85,11 @@ class RunningAcquisitionWidget(BaseWidget):
         self.x_range_spinbox.setRange(1, 60)
         self.x_range_spinbox.valueChanged.connect(self.update_graph)
         x_range_layout.addWidget(self.x_range_spinbox)
+
+        # Add Y-axis lock checkbox
+        self.lock_y_axis_checkbox = QCheckBox("Lock Y-axis")
+        self.lock_y_axis_checkbox.stateChanged.connect(self.update_graph)
+        x_range_layout.addWidget(self.lock_y_axis_checkbox)
 
         # Spacer for alignment
         x_range_layout.addSpacerItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
@@ -342,8 +347,10 @@ class RunningAcquisitionWidget(BaseWidget):
         else:
             self.plot_widget.setXRange(current_time - time_window, current_time)
 
-        # Y-axis autoscale only if acquisition is running
-        if self.model.acquisition_running and len(data_visible) > 0:
+        # Y-axis range
+        if self.lock_y_axis_checkbox.isChecked():
+            self.plot_widget.setYRange(-1.6, 1.6)
+        elif self.model.acquisition_running and len(data_visible) > 0:
             y_min, y_max = self._compute_y_range(data_visible)
             self.plot_widget.setYRange(y_min, y_max)
 
